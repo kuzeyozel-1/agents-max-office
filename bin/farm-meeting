@@ -15,7 +15,7 @@ const q = (v) => "\x27" + String(v).replace(/\x27/g, "") + "\x27";
 console.log("CFG_COMPANY=" + q(CFG.company) + "; CFG_PROJECT=" + q(CFG.projectDir) + "; CFG_BRIEFS=" + q(CFG.briefFiles.join(", ")) + "; CFG_RED=" + q(CFG.redLines));
 ')"
 PROJECT_DIR="${PROJECT_DIR:-$CFG_PROJECT}"
-SLUG="$(printf '%s' "$DEPT" | iconv -f UTF-8 -t ASCII//TRANSLIT 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-//; s/-$//')"
+SLUG="$(python3 -c 'import sys,re;s=sys.argv[1].translate(str.maketrans("ÖÜÇŞĞİıöüçşğ","OUCSGIioucsg")).lower();print(re.sub(r"[^a-z0-9]+","-",s).strip("-"))' "$DEPT")"
 [ -n "$SLUG" ] || SLUG="departman"
 OUT="$HERE/meetings/$(date +%F)-$SLUG.md"
 mkdir -p "$HERE/meetings"

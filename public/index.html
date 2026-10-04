@@ -43,9 +43,17 @@
   input[type=text], input[type=number], input[type=url] { background:#14100c; color:var(--ink); border:2px solid #5a4129; border-radius:4px; padding:4px 6px; font:inherit; width:100%; }
   .two { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
   .chips { display:flex; flex-wrap:wrap; gap:4px; } .chips button { font-size:11px; padding:2px 6px; }
-  #chatlog { max-height:300px; overflow:auto; display:flex; flex-direction:column; gap:5px; }
-  .msg { padding:5px 8px; border-radius:6px; font-size:12px; white-space:pre-wrap; max-width:92%; }
-  .msg.me { background:#4a3420; align-self:flex-end; } .msg.mars { background:#f3e7cf; color:#2a1f17; align-self:flex-start; }
+  #chatlog { height:min(56vh,520px); overflow:auto; display:flex; flex-direction:column; gap:10px; padding:4px 2px 4px 0; scroll-behavior:smooth; }
+  .turn { display:flex; flex-direction:column; gap:4px; }
+  .q { align-self:flex-end; max-width:88%; background:#4a3420; border-radius:10px 10px 2px 10px; padding:4px 9px; font-size:12px; color:var(--ink); word-break:break-word; }
+  .a { align-self:flex-start; max-width:96%; background:#f3e7cf; color:#2a1f17; border-radius:2px 10px 10px 10px; padding:8px 11px; font-size:12.5px; line-height:1.5; word-break:break-word; }
+  .a b { color:#7a3f00; } .a code { background:#e4d3b0; padding:0 4px; border-radius:3px; font-size:11.5px; } .a .bl { display:block; padding-left:12px; text-indent:-10px; margin:1px 0; }
+  .a .via { display:block; margin-top:6px; padding-top:5px; border-top:1px solid #d8c59d; color:#7b6a4a; font-size:11px; }
+  .ts { font-size:10px; color:var(--mute); align-self:flex-end; } .turn .ts.l { align-self:flex-start; }
+  .older { align-self:center; font-size:11px; color:var(--mute); background:none; border:1px dashed var(--edge); padding:3px 10px; }
+  .typing i { display:inline-block; width:5px; height:5px; border-radius:50%; background:#7a3f00; margin:0 1px; animation:bl 1s infinite; } .typing i:nth-child(2){animation-delay:.2s} .typing i:nth-child(3){animation-delay:.4s}
+  @keyframes bl { 0%,60%,100%{opacity:.25} 30%{opacity:1} }
+  .chathead { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; } .chathead h2 { margin:0; }
   .tk { display:flex; gap:6px; align-items:flex-start; padding:3px 0; border-bottom:1px dashed #3d2d1e; } .tk.done span { text-decoration:line-through; color:var(--mute); }
   .tk button { padding:0 6px; } .news a { color:var(--ink); text-decoration:none; } .news a:hover { color:var(--accent); }
   #netBox { display:none; background:#10243a; border:2px solid #4a8fd8; color:#cfe6ff; padding:8px 10px; border-radius:6px; }
@@ -91,7 +99,7 @@
       <div class="card"><h2>LinkedIn</h2><div id="li"></div></div>
     </section>
     <section data-tab="sohbet">
-      <div class="card"><h2>__ASSISTANT__ ile sohbet</h2><div id="chatlog"></div><div class="chips" id="chips" style="margin:6px 0"></div><div class="two" style="grid-template-columns:1fr auto"><input type="text" id="chatIn" placeholder="/yardim, /gorev …, /sor …"><button id="chatSend">Gönder</button></div><div class="small mute" style="margin-top:4px">/sor Claude kullanır (≈0,15–0,30 USD; en küçük çağrı bile ≈0,12). Bugünkü Mars harcaması: <b id="costToday">$0.00</b>. Çalışan terminallere komut yollayamaz; ofisin kendi işlerini yapar.</div></div>
+      <div class="card"><div class="chathead"><h2>__ASSISTANT__ ile sohbet</h2><button id="chatClear" class="small" title="Sohbet geçmişini temizle">Temizle</button></div><div id="chatlog"></div><div class="chips" id="chips" style="margin:8px 0 6px"></div><div class="two" style="grid-template-columns:1fr auto"><input type="text" id="chatIn" placeholder="Komut ya da soru yazın…" autocomplete="off"><button id="chatSend">Gönder</button></div><div class="small mute" style="margin-top:5px">Yanıtın altında hangi yapay zekâdan geldiği yazar. Claude limit/hata/internet yokken ücretsiz sağlayıcıya düşer · bugünkü harcama <b id="costToday">$0.00</b></div></div>
     </section>
     <section data-tab="ajan">
       <div class="card" id="detail"><h2>Çalışan</h2><div class="small mute">Bir çalışanın üzerine gelin ya da tıklayın.</div></div>
@@ -583,32 +591,46 @@ function renderLinkedin() {
     document.getElementById("liSave").onclick = async () => { await api("/api/linkedin", { url: document.getElementById("liUrl").value, followers: document.getElementById("liF").value, impressions7d: document.getElementById("liI").value, posts7d: document.getElementById("liP").value }); delete sig.li; poll(); };
   });
 }
-let chatMsgs = [];
-function addChat(who, text) { chatMsgs.push({ who, text }); renderChat(); }
+let chatTurns = [], chatAll = false, chatPending = false;
+const hm = (t) => new Date(t).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+function fmt(text) { // güvenli: önce kaçış, sonra yalnızca **kalın**, `kod` ve "- madde" biçimleri
+  let t = esc(text).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>");
+  const via = /\n\n— (yanıt|maliyet)[^\n]*$/.exec(t); let tail = "";
+  if (via) { tail = `<span class="via">${via[0].trim().replace(/^—\s*/, "")}</span>`; t = t.slice(0, via.index); }
+  return t.split("\n").map((l) => (/^\s*[-*•]\s+/.test(l) ? `<span class="bl">• ${l.replace(/^\s*[-*•]\s+/, "")}</span>` : /^\s*\d+\.\s+/.test(l) ? `<span class="bl">${l.trim()}</span>` : l)).join("<br>").replace(/(<\/span>)<br>/g, "$1") + tail;
+}
 function renderChat() {
   const box = document.getElementById("chatlog"); if (!box) return;
-  box.innerHTML = chatMsgs.map((m) => `<div class="msg ${m.who}">${esc(m.text)}</div>`).join("") || `<div class="mute small">Merhaba __OWNER__, ben __ASSISTANT__. /yardim yazın.</div>`;
-  const lastM = chatMsgs[chatMsgs.length - 1];
-  if (lastM && lastM.who === "mars" && /\/onay yazın/.test(lastM.text)) box.insertAdjacentHTML("beforeend", `<button id="ok" style="align-self:flex-start">✔ Onayla</button>`);
+  const near = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  const shown = chatAll ? chatTurns : chatTurns.slice(-6), hidden = chatTurns.length - shown.length;
+  box.innerHTML = (hidden > 0 ? `<button class="older" id="older">↑ ${hidden} eski konuşmayı göster</button>` : "") +
+    (shown.map((t) => `<div class="turn"><div class="q">${esc(t.q)}</div><div class="ts">${t.at ? hm(t.at) : ""}</div>${t.a === null ? `<div class="a typing"><i></i><i></i><i></i></div>` : `<div class="a">${fmt(t.a)}</div><div class="ts l">${t.at ? hm(t.at) : ""}</div>`}</div>`).join("") ||
+    `<div class="mute small" style="padding:12px">Merhaba __OWNER__, ben __ASSISTANT__. Aşağıdaki kısayollardan birini seçin ya da <code>/yardim</code> yazın.</div>`);
+  const last = chatTurns[chatTurns.length - 1];
+  if (last && last.a && /\/onay yazın/.test(last.a)) box.insertAdjacentHTML("beforeend", `<button id="ok" style="align-self:flex-start">✔ Onayla</button>`);
   const ok = document.getElementById("ok"); if (ok) ok.onclick = () => sendChat("/onay");
-  box.scrollTop = box.scrollHeight;
+  const ol = document.getElementById("older"); if (ol) ol.onclick = () => { chatAll = true; renderChat(); };
+  if (near || chatPending) box.scrollTop = box.scrollHeight;
 }
 async function sendChat(text) {
-  if (!text.trim()) return;
-  addChat("me", text); document.getElementById("chatIn").value = "";
-  if (/^\/sor\b/i.test(text)) addChat("mars", "Düşünüyorum…");
+  text = text.trim(); if (!text || chatPending) return;
+  document.getElementById("chatIn").value = ""; chatPending = true;
+  const turn = { q: text, a: null, at: Date.now() }; chatTurns.push(turn); renderChat();
   const r = await api("/api/chat", { text });
-  if (/^\/sor\b/i.test(text)) chatMsgs.pop();
-  addChat("mars", r.reply || "(yanıt yok)"); poll();
+  turn.a = r.reply || "(yanıt yok)"; turn.at = Date.now(); chatPending = false; renderChat(); poll();
 }
+document.getElementById("chatClear").onclick = async function () {
+  if (this.dataset.armed !== "1") { this.dataset.armed = "1"; this.textContent = "Emin misiniz?"; setTimeout(() => { this.dataset.armed = ""; this.textContent = "Temizle"; }, 3000); return; }
+  await api("/api/chat/clear", {}); chatTurns = []; chatAll = false; this.dataset.armed = ""; this.textContent = "Temizle"; renderChat();
+};
 document.getElementById("chatSend").onclick = () => sendChat(document.getElementById("chatIn").value);
 document.getElementById("chatIn").addEventListener("keydown", (e) => { if (e.key === "Enter") sendChat(e.target.value); });
 document.getElementById("todoAdd").onclick = async () => { const i = document.getElementById("todoIn"); if (!i.value.trim()) return; await api("/api/today", { op: "add", text: i.value }); i.value = ""; poll(); };
 document.getElementById("todoIn").addEventListener("keydown", (e) => { if (e.key === "Enter") document.getElementById("todoAdd").click(); });
 document.getElementById("todoClear").onclick = async () => { await api("/api/today", { op: "clearDone" }); poll(); };
-document.getElementById("chips").innerHTML = ["/durum", "/yardim", "/toplanti Mühendislik", "/sor Bu hafta neye odaklanmalıyız?"].map((c) => `<button data-c="${esc(c)}">${esc(c.length > 22 ? c.slice(0, 20) + "…" : c)}</button>`).join("");
-document.querySelectorAll("#chips button").forEach((b) => { b.onclick = () => { document.getElementById("chatIn").value = b.dataset.c; document.getElementById("chatIn").focus(); }; });
-fetch("/api/chat/log").then((r) => r.json()).then((l) => { chatMsgs = l.flatMap((m) => [{ who: "me", text: m.q }, { who: "mars", text: m.a }]); renderChat(); }).catch(() => {});
+document.getElementById("chips").innerHTML = [["/durum", "Durum"], ["/yardim", "Komutlar"], ["/ai", "AI durumu"], ["/sor Bu hafta neye odaklanmalıyız?", "Bu hafta odak?"], ["/toplanti Satış", "Satış toplantısı"]].map(([c, l]) => `<button data-c="${esc(c)}" title="${esc(c)}">${esc(l)}</button>`).join("");
+document.querySelectorAll("#chips button").forEach((b) => { b.onclick = () => { const c = b.dataset.c; if (/^\/(durum|yardim|ai)$/.test(c)) sendChat(c); else { const i = document.getElementById("chatIn"); i.value = c; i.focus(); } }; });
+fetch("/api/chat/log").then((r) => r.json()).then((l) => { chatTurns = l.map((m) => ({ q: m.q, a: m.a, at: m.at })); renderChat(); }).catch(() => {});
 let shelf = [];
 async function loadShelf() { shelf = await fetch("/api/shelf").then((r) => r.json()).catch(() => []); renderShelf(); }
 function renderShelf() {
