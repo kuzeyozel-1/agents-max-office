@@ -9,7 +9,7 @@ if (!CFG.providers.length) { console.log("office.json içinde `providers` yok. c
 if (cmd === "models") { try { const m = await models(arg || ""); console.log(m.slice(0, 60).join("\n") + (m.length > 60 ? `\n… (+${m.length - 60})` : "")); } catch (e) { console.error("Hata:", e.message); process.exit(1); } }
 else if (cmd === "test") {
   for (const p of CFG.providers) {
-    const r = await ask({ safe: "Yalnızca tek kelime yaz: merhaba", full: "Yalnızca tek kelime yaz: merhaba", maxTokens: 12, only: p.name });
+    const r = await ask({ safe: "Yalnızca tek kelime yaz: merhaba", full: "Yalnızca tek kelime yaz: merhaba", maxTokens: 300, only: p.name });
     const s = status().find((x) => x.name === p.name);
     console.log(`${p.name.padEnd(14)} ${r.ok ? "OK  → " + r.text.slice(0, 40).replace(/\n/g, " ") : "ATLANDI/HATA → " + (s?.err || s?.state)}`);
   }
