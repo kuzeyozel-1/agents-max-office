@@ -89,6 +89,7 @@
     </section>
     <section data-tab="bugun" style="display:flex">
       <div class="card"><h2>Bugün yapacaklarım</h2><div id="todo"></div><div class="two" style="grid-template-columns:1fr auto;margin-top:6px"><input type="text" id="todoIn" placeholder="Yeni iş ekle…"><button id="todoAdd">Ekle</button></div><div style="margin-top:6px"><button id="todoClear" class="small">Tamamlananları temizle</button></div></div>
+      <div class="card"><h2>Talepler (site paneli)</h2><div id="leads" class="small"></div></div>
       <div class="card"><h2>Ajanların bugünkü işleri</h2><div id="wd" class="small"></div><div id="wdOut"></div></div>
       <details class="card" open><summary>Site sağlığı</summary><div id="health" class="small"></div></details>
       <details class="card"><summary>Kopyalanabilir metinler</summary><div id="prompts" class="small"></div></details>
@@ -619,6 +620,18 @@ function renderWorkday() {
   out.innerHTML = wdOpen && wdText ? `<div style="margin:6px 0 2px"><button id="wdCopy">Çıktıyı kopyala</button></div><pre style="white-space:pre-wrap;max-height:340px;overflow:auto">${esc(wdText)}</pre>` : "";
   const wc = document.getElementById("wdCopy"); if (wc) wc.onclick = () => copyText(wdText.replace(/^#.*\n\n_Taslak[^\n]*\n\n/, ""), wc);
 }
+
+function renderLeads() {
+  const el = document.getElementById("leads"), L = S.leads; if (!el || !L) return;
+  if (!L.configured) { el.innerHTML = '<div class="mute">Bağlı değil (config: leadsFeed).</div>'; return; }
+  const real = L.items.filter((l) => !l.test), tests = L.items.length - real.length, st = { new: "Yeni", contacted: "Arandı", quoted: "Teklif verildi", won: "Kazanıldı", lost: "Kaybedildi" };
+  once("leads", [L.items, L.error, L.checkedAt], el, () => {
+    el.innerHTML = (L.error ? `<div style="color:#e5484d">⚠ Okunamadı: ${esc(L.error)}</div>` : "") +
+      `<div><b>${real.length}</b> gerçek talep · ${tests} test/demo gizlendi</div>` +
+      real.slice(0, 8).map((l) => `<div class="li"><b>${esc(l.name)}</b> · ${esc(l.project || l.formType)} · ${esc(l.phone)} <span class="mute">${esc(st[l.status] || l.status)}${l.source ? " · " + esc(l.source) : ""} · ${esc((l.createdAt || "").slice(0, 10))}</span></div>`).join("") +
+      `<div class="mute" style="margin-top:4px">Son kontrol: ${L.checkedAt ? Math.round((Date.now() - L.checkedAt) / 60000) + " dk önce" : "—"} · 5 dk'da bir</div>`;
+  });
+}
 function renderGoals() {
   const gs = S.goals || [], el = document.getElementById("goals");
   once("goals", gs, el, () => {
@@ -690,7 +703,7 @@ function renderShelf() {
 document.getElementById("shelfQ").addEventListener("input", renderShelf);
 function renderAll() {
   const ct = document.getElementById("costToday"); if (ct) ct.textContent = "$" + (S.costToday || 0).toFixed(2);
-  renderMars(); renderNetBox(); renderHealth(); renderToday(); renderNews(); renderRadar(); renderAi(); renderWorkday(); renderGoals(); renderLinkedin();
+  renderMars(); renderNetBox(); renderHealth(); renderToday(); renderNews(); renderRadar(); renderAi(); renderWorkday(); renderLeads(); renderGoals(); renderLinkedin();
   const w = [...agents.values()].filter((a) => a.state === "working").length; document.title = (w ? `(${w}) ` : "") + "__COMPANY__ Ofisi";
 }
 
