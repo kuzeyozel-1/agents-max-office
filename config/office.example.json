@@ -49,5 +49,12 @@
       "enabled": false
     }
   ],
-  "_providers_not": "Sırayla denenir. Anahtarlar config/keys.env'de (git'e girmez). Model kimliklerini `node bin/farm-providers.mjs models <ad>` ile doğrulayın. Ollama internet yokken de çalışır."
+  "_providers_not": "Sırayla denenir. Anahtarlar config/keys.env'de (git'e girmez). Model kimliklerini `node bin/farm-providers.mjs models <ad>` ile doğrulayın. Ollama internet yokken de çalışır.",
+  "links": [
+    {
+      "group": "Site",
+      "label": "Anasayfa",
+      "url": "https://example.com/"
+    }
+  ]
 }

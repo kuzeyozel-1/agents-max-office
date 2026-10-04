@@ -53,6 +53,8 @@
   .older { align-self:center; font-size:11px; color:var(--mute); background:none; border:1px dashed var(--edge); padding:3px 10px; }
   .typing i { display:inline-block; width:5px; height:5px; border-radius:50%; background:#7a3f00; margin:0 1px; animation:bl 1s infinite; } .typing i:nth-child(2){animation-delay:.2s} .typing i:nth-child(3){animation-delay:.4s}
   @keyframes bl { 0%,60%,100%{opacity:.25} 30%{opacity:1} }
+  #menuBtn { font-size:12px; padding:3px 9px; } #menuPanel { display:none; position:absolute; right:10px; top:44px; z-index:50; width:min(330px,92vw); max-height:78vh; overflow:auto; background:#2a1f17; border:2px solid var(--edge); border-radius:10px; padding:10px 12px; box-shadow:0 12px 30px rgba(0,0,0,.5); } #menuPanel.open { display:block; }
+  #menuPanel h4 { margin:10px 0 4px; font-size:11px; letter-spacing:.1em; color:var(--accent); text-transform:uppercase; } #menuPanel a, #menuPanel button.mi { display:block; width:100%; text-align:left; padding:5px 8px; margin:1px 0; border-radius:6px; color:var(--ink); text-decoration:none; font-size:12.5px; background:none; border:none; cursor:pointer; } #menuPanel a:hover, #menuPanel button.mi:hover { background:#4a3420; } #menuPanel .x { float:right; }
   .chathead { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; } .chathead h2 { margin:0; }
   .tk { display:flex; gap:6px; align-items:flex-start; padding:3px 0; border-bottom:1px dashed #3d2d1e; } .tk.done span { text-decoration:line-through; color:var(--mute); }
   .tk button { padding:0 6px; } .news a { color:var(--ink); text-decoration:none; } .news a:hover { color:var(--accent); }
@@ -69,7 +71,7 @@
     <div id="tip"></div>
   </div>
   <aside>
-    <div class="card"><div class="row"><h1>VİNCİ OFİSİ</h1><span id="clock" class="mute"></span></div><div id="shiftName" class="small mute"></div></div>
+    <div class="card" style="position:relative"><div class="row"><h1 style="text-transform:uppercase">__COMPANY__ Ofisi</h1><span><span id="clock" class="mute"></span> <button id="menuBtn" title="Menü (M)">☰ Menü</button></span></div><div id="shiftName" class="small mute"></div><div id="menuPanel"></div></div>
     <div id="banner" class="small"></div>
     <div id="limitBox" class="small"></div>
     <div id="netBox" class="small"></div>
@@ -84,6 +86,7 @@
       <div class="card"><h2>Olay akışı</h2><div id="log" class="small"></div></div>
     </section>
     <section data-tab="bugun">
+      <div class="card"><h2>Kopyalanabilir metinler</h2><div id="prompts" class="small"></div></div>
       <div class="card"><h2>Ajanların bugünkü işleri</h2><div id="wd" class="small"></div><div id="wdOut"></div></div>
       <div class="card"><h2>Bugün yapacaklarım</h2><div id="todo"></div><div class="two" style="grid-template-columns:1fr auto;margin-top:6px"><input type="text" id="todoIn" placeholder="Yeni iş ekle…"><button id="todoAdd">Ekle</button></div><div style="margin-top:6px"><button id="todoClear" class="small">Tamamlananları temizle</button></div></div>
       <div class="card"><h2>Öneriler (otomatik)</h2><div id="sugg" class="small"></div></div>
@@ -557,6 +560,46 @@ function renderAi() {
     el.querySelectorAll("button[data-ai]").forEach((b) => { b.onclick = async () => { await api("/api/chat", { text: "/ai " + b.dataset.ai, confirm: true }); poll(); }; });
   });
 }
+// ---------- menü ----------
+const ACTIONS = [
+  ["Toplantı", [["Genel durum (Özel)", "/toplanti Özel"], ["Satış", "/toplanti Satış"], ["Mühendislik", "/toplanti Mühendislik"], ["Tasarım", "/toplanti Tasarım"]]],
+  ["Çalışma", [["Günün planını yeniden başlat", "__restart"], ["Pazar radarını şimdi çalıştır", "__radar"], ["Durum özeti", "/durum"]]],
+  ["Yapay zekâ modu", [["Otomatik (Claude → ücretsiz)", "/ai oto"], ["Yalnızca Claude", "/ai claude"], ["Önce ücretsiz", "/ai ucretsiz"]]],
+  ["Toplantı takvimi", [["Aç", "/takvim ac"], ["Kapat", "/takvim kapat"]]],
+];
+let menuArm = "";
+function renderMenu() {
+  const el = document.getElementById("menuPanel"); if (!el) return;
+  const links = S.links || [], groups = [...new Set(links.map((l) => l.group))];
+  const tabs = [["ofis", "Ofis"], ["bugun", "Bugün"], ["gundem", "Gündem"], ["hedef", "Hedefler"], ["sohbet", "Sohbet"], ["ajan", "Ajan"]];
+  el.innerHTML = `<button class="mi x" id="menuX" style="width:auto">✕</button><h4>Sekmeler</h4>` + tabs.map(([k, l]) => `<button class="mi" data-tab-go="${k}">${l}</button>`).join("") +
+    `<h4>Kopyala</h4>` + (promptItems.length ? promptItems.map((p) => `<button class="mi" data-cp="${esc(p.id)}">📋 ${esc(p.title.length > 44 ? p.title.slice(0, 42) + "…" : p.title)}</button>`).join("") : `<div class="mute small" style="padding:4px 8px">Metin yok</div>`) +
+    ACTIONS.map(([g, items]) => `<h4>${g}</h4>` + items.map(([l, cmd]) => `<button class="mi" data-act="${esc(cmd)}">${esc(l)}</button>`).join("")).join("") +
+    groups.map((g) => `<h4>${esc(g)}</h4>` + links.filter((l) => l.group === g).map((l) => `<a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener noreferrer">↗ ${esc(l.label)}</a>`).join("")).join("");
+  document.getElementById("menuX").onclick = () => el.classList.remove("open");
+  el.querySelectorAll("[data-tab-go]").forEach((b) => { b.onclick = () => { setTab(b.dataset.tabGo); el.classList.remove("open"); }; });
+  el.querySelectorAll("[data-cp]").forEach((b) => { b.onclick = () => { copyText((promptItems.find((p) => p.id === b.dataset.cp) || {}).text || "", null); const o = b.textContent; b.textContent = "✓ Kopyalandı"; setTimeout(() => { b.textContent = o; }, 1200); }; });
+  el.querySelectorAll("[data-act]").forEach((b) => { b.onclick = async () => {
+    const cmd = b.dataset.act, risky = /^\/toplanti|__radar/.test(cmd); // Claude harcayan işlemler: ilk tık "emin misiniz", ikinci tık çalıştırır
+    if (risky && menuArm !== cmd) { menuArm = cmd; const o = b.textContent; b.textContent = "Claude kullanır — tekrar tıklayın"; setTimeout(() => { if (menuArm === cmd) menuArm = ""; b.textContent = o; }, 3000); return; }
+    menuArm = ""; el.classList.remove("open");
+    if (cmd === "__restart") await api("/api/workday/restart", {}); else if (cmd === "__radar") await api("/api/radar/run"); else { await api("/api/chat", { text: cmd, confirm: true }); setTab("sohbet"); }
+    poll(); if (!/^\/(toplanti|durum|ai|takvim)/.test(cmd)) return; fetch("/api/chat/log").then((r) => r.json()).then((l) => { chatTurns = l.map((m) => ({ q: m.q, a: m.a, at: m.at })); renderChat(); });
+  }; });
+}
+document.getElementById("menuBtn").onclick = () => { renderMenu(); document.getElementById("menuPanel").classList.toggle("open"); };
+document.addEventListener("click", (e) => { const p = document.getElementById("menuPanel"); if (p.classList.contains("open") && !p.contains(e.target) && e.target.id !== "menuBtn") p.classList.remove("open"); });
+document.addEventListener("keydown", (e) => { if ((e.key === "m" || e.key === "M") && !/INPUT|TEXTAREA/.test(document.activeElement?.tagName)) document.getElementById("menuBtn").click(); if (e.key === "Escape") document.getElementById("menuPanel").classList.remove("open"); });
+let promptItems = [];
+const copyText = async (text, btn) => { try { await navigator.clipboard.writeText(text); } catch { const t = document.createElement("textarea"); t.value = text; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); } if (btn) { const o = btn.textContent; btn.textContent = "Kopyalandı ✓"; btn.disabled = true; setTimeout(() => { btn.textContent = o; btn.disabled = false; }, 1400); } };
+async function loadPrompts() { promptItems = await fetch("/api/prompts").then((r) => r.json()).catch(() => []); renderPrompts(); }
+function renderPrompts() {
+  const el = document.getElementById("prompts"); if (!el) return;
+  const groups = [...new Set(promptItems.map((p) => p.group))];
+  el.innerHTML = promptItems.length ? groups.map((g) => `<div class="mute" style="margin:8px 0 3px">${esc(g)}</div>` + promptItems.filter((p) => p.group === g).map((p) => `<div class="li" style="display:flex;gap:8px;align-items:flex-start"><div style="flex:1;min-width:0"><b>${esc(p.title)}</b><div class="mute" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.text.replace(/\s+/g, " ").slice(0, 110))}</div></div><button data-cp="${esc(p.id)}">Kopyala</button></div>`).join("")).join("") : `<div class="mute">Henüz kopyalanabilir metin yok.</div>`;
+  el.querySelectorAll("[data-cp]").forEach((b) => { b.onclick = () => copyText((promptItems.find((p) => p.id === b.dataset.cp) || {}).text || "", b); });
+}
+loadPrompts(); setInterval(loadPrompts, 60000);
 let wdOpen = "", wdText = "";
 function renderWorkday() {
   const w = S.workday || { tasks: [] }, el = document.getElementById("wd"), out = document.getElementById("wdOut");
@@ -569,7 +612,8 @@ function renderWorkday() {
     el.querySelectorAll("[data-wd]").forEach((n) => { n.onclick = async () => { const t = w.tasks.find((x) => x.id === n.dataset.wd); if (!t || t.status !== "done") return; wdOpen = t.id; wdText = (await fetch("/api/workday/output?id=" + encodeURIComponent(t.id)).then((r) => r.json()).catch(() => ({ text: "" }))).text; renderWorkday(); }; });
     document.getElementById("wdRe").onclick = async () => { wdOpen = ""; wdText = ""; await api("/api/workday/restart", {}); poll(); };
   });
-  out.innerHTML = wdOpen && wdText ? `<pre style="white-space:pre-wrap;max-height:340px;overflow:auto">${esc(wdText)}</pre>` : "";
+  out.innerHTML = wdOpen && wdText ? `<div style="margin:6px 0 2px"><button id="wdCopy">Çıktıyı kopyala</button></div><pre style="white-space:pre-wrap;max-height:340px;overflow:auto">${esc(wdText)}</pre>` : "";
+  const wc = document.getElementById("wdCopy"); if (wc) wc.onclick = () => copyText(wdText.replace(/^#.*\n\n_Taslak[^\n]*\n\n/, ""), wc);
 }
 function renderGoals() {
   const gs = S.goals || [], el = document.getElementById("goals");
