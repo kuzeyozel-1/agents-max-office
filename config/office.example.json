@@ -1,0 +1,12 @@
+{
+  "_not": "Bunu config/office.json olarak kopyalayıp düzenleyin (office.json git'e girmez). Hepsi isteğe bağlı.",
+  "company": "Örnek Ajans",
+  "owner": "Yönetici",
+  "assistant": "Asistan",
+  "projectDir": "~/dev/proje",
+  "memoryFile": "",
+  "briefFiles": ["CLAUDE.md"],
+  "redLines": "Abartılı vaat yok; her iddianın ölçümü olsun.",
+  "siteUrl": "",
+  "probes": [{ "name": "Anasayfa", "path": "/" }, { "name": "Sitemap", "path": "/sitemap.xml" }]
+}

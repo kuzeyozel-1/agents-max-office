@@ -1,0 +1,50 @@
+{
+ "_not": "Gündem kaynakları (RSS/Atom). Ekleyip çıkarabilirsiniz; 30 dk'da bir yenilenir.",
+ "sources": [
+  {
+   "cat": "Türkiye",
+   "name": "Anadolu Ajansı",
+   "url": "https://www.aa.com.tr/tr/rss/default?cat=guncel"
+  },
+  {
+   "cat": "Türkiye",
+   "name": "BBC Türkçe",
+   "url": "https://feeds.bbci.co.uk/turkce/rss.xml"
+  },
+  {
+   "cat": "Türkiye",
+   "name": "TRT Haber",
+   "url": "https://www.trthaber.com/manset.rss"
+  },
+  {
+   "cat": "Teknoloji TR",
+   "name": "Webrazzi",
+   "url": "https://webrazzi.com/feed/"
+  },
+  {
+   "cat": "Teknoloji TR",
+   "name": "ShiftDelete",
+   "url": "https://shiftdelete.net/feed"
+  },
+  {
+   "cat": "Yazılım",
+   "name": "Hacker News",
+   "url": "https://hnrss.org/frontpage"
+  },
+  {
+   "cat": "Yazılım",
+   "name": "TechCrunch",
+   "url": "https://techcrunch.com/feed/"
+  },
+  {
+   "cat": "Pazarlama/SEO",
+   "name": "Search Engine Journal",
+   "url": "https://www.searchenginejournal.com/feed/"
+  },
+  {
+   "cat": "Pazarlama/SEO",
+   "name": "Google Search Central",
+   "url": "https://feeds.feedburner.com/blogspot/amDG"
+  }
+ ]
+}

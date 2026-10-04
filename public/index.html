@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__COMPANY__ Ofisi — Ajanlar</title>
+<style>
+  :root { --bg:#14100c; --panel:#2a1f17; --edge:#5a4129; --ink:#f3e7cf; --mute:#b9a583; --accent:#f5a623; --ok:#7bd36b; --warn:#f2c14e; --off:#6f7d96; --meet:#b06bff; --duty:#6fb3ff; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--ink); font:13px/1.45 "Courier New",ui-monospace,monospace; }
+  #app { display:flex; height:100vh; gap:10px; padding:10px; }
+  #stage { flex:1; min-width:0; display:flex; align-items:center; justify-content:center; background:#0d0a07; border:3px solid var(--edge); border-radius:6px; position:relative; overflow:hidden; }
+  canvas { max-width:100%; max-height:100%; width:auto; height:auto; aspect-ratio:1448/1086; display:block; }
+  #tip { position:absolute; pointer-events:none; background:#14100c; border:2px solid var(--accent); padding:6px 8px; max-width:300px; display:none; z-index:5; }
+  #tip b { color:var(--accent); }
+  #viewbar { position:absolute; left:10px; bottom:10px; display:flex; gap:8px; align-items:center; z-index:4; }
+  aside { width:350px; flex:none; display:flex; flex-direction:column; gap:8px; overflow:auto; }
+  .card { background:var(--panel); border:3px solid var(--edge); border-radius:6px; padding:8px 10px; }
+  h1 { margin:0; font-size:18px; letter-spacing:1px; color:var(--accent); }
+  h2 { margin:0 0 6px; font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--mute); }
+  .row { display:flex; gap:8px; align-items:baseline; justify-content:space-between; }
+  .stats { display:grid; grid-template-columns:1fr 1fr; gap:4px 10px; }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:6px; }
+  .li { padding:3px 0; border-bottom:1px dashed #3d2d1e; } .li:last-child { border:0; }
+  .mute { color:var(--mute); } .small { font-size:11px; }
+  #log { max-height:150px; overflow:auto; }
+  button { background:var(--edge); color:var(--ink); border:2px solid #7a5a39; border-radius:4px; padding:3px 8px; font:inherit; cursor:pointer; }
+  button:hover { background:#7a5a39; } button.on { background:var(--accent); color:#1b1208; border-color:#ffcc7a; }
+  .rooms { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+  .rooms button { text-align:left; font-size:11px; padding:3px 6px; }
+  code { background:#14100c; padding:2px 5px; border-radius:3px; word-break:break-all; display:block; margin:4px 0; }
+  #banner { display:none; background:#3a2a10; border:2px solid var(--warn); color:var(--warn); padding:6px 8px; }
+  #limitBox { display:none; background:#2a1030; border:2px solid var(--meet); color:#e5c9ff; padding:8px 10px; border-radius:6px; }
+  pre { white-space:pre-wrap; background:#14100c; padding:6px; border-radius:4px; max-height:240px; overflow:auto; font-size:11px; }
+  .link { color:var(--accent); cursor:pointer; text-decoration:underline; }
+  #tabs { display:flex; gap:4px; flex-wrap:wrap; }
+  #tabs button { flex:1; padding:5px 4px; font-size:12px; }
+  aside section { display:none; flex-direction:column; gap:8px; }
+  #mars { background:linear-gradient(135deg,#3a2a18,#2a1f17); }
+  #mars .bubble { background:#f3e7cf; color:#2a1f17; border-radius:8px; padding:7px 10px; font-size:12px; position:relative; margin-top:6px; }
+  #mars .who { color:var(--accent); font-weight:bold; letter-spacing:2px; }
+  .bar { height:10px; background:#14100c; border-radius:3px; overflow:hidden; border:1px solid #3d2d1e; margin:3px 0 5px; } .bar i { display:block; height:100%; background:var(--accent); }
+  input[type=text], input[type=number], input[type=url] { background:#14100c; color:var(--ink); border:2px solid #5a4129; border-radius:4px; padding:4px 6px; font:inherit; width:100%; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .chips { display:flex; flex-wrap:wrap; gap:4px; } .chips button { font-size:11px; padding:2px 6px; }
+  #chatlog { max-height:300px; overflow:auto; display:flex; flex-direction:column; gap:5px; }
+  .msg { padding:5px 8px; border-radius:6px; font-size:12px; white-space:pre-wrap; max-width:92%; }
+  .msg.me { background:#4a3420; align-self:flex-end; } .msg.mars { background:#f3e7cf; color:#2a1f17; align-self:flex-start; }
+  .tk { display:flex; gap:6px; align-items:flex-start; padding:3px 0; border-bottom:1px dashed #3d2d1e; } .tk.done span { text-decoration:line-through; color:var(--mute); }
+  .tk button { padding:0 6px; } .news a { color:var(--ink); text-decoration:none; } .news a:hover { color:var(--accent); }
+  #netBox { display:none; background:#10243a; border:2px solid #4a8fd8; color:#cfe6ff; padding:8px 10px; border-radius:6px; }
+  @media (max-width:760px){ #stage{min-height:56vh} button{padding:8px 12px} #tabs button{padding:8px 4px} }
+  @media (max-width:1100px){ #app{flex-direction:column;height:auto} aside{width:auto} }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="c" width="1448" height="1086"></canvas>
+    <div id="viewbar"></div>
+    <div id="tip"></div>
+  </div>
+  <aside>
+    <div class="card"><div class="row"><h1>VİNCİ OFİSİ</h1><span id="clock" class="mute"></span></div><div id="shiftName" class="small mute"></div></div>
+    <div id="banner" class="small"></div>
+    <div id="limitBox" class="small"></div>
+    <div id="netBox" class="small"></div>
+    <div class="card" id="mars"></div>
+    <div id="tabs"><button data-tab="ofis" class="on">Ofis</button><button data-tab="bugun">Bugün</button><button data-tab="gundem">Gündem</button><button data-tab="hedef">Hedefler</button><button data-tab="sohbet">Sohbet</button><button data-tab="ajan">Ajan</button></div>
+    <section data-tab="ofis" style="display:flex">
+      <div class="card"><h2>Ofis durumu</h2><div class="stats" id="stats"></div></div>
+      <div class="card"><h2>Site sağlığı</h2><div id="health" class="small"></div></div>
+      <div class="card"><h2>Odalar (departmanlar)</h2><div class="rooms" id="rooms"></div></div>
+      <div class="card"><h2>Terminaller (sunucu odası)</h2><div id="sessions" class="small"></div></div>
+      <div class="card"><h2>Şu an ne yapıyorlar</h2><div id="doing" class="small"></div></div>
+      <div class="card"><h2>Olay akışı</h2><div id="log" class="small"></div></div>
+    </section>
+    <section data-tab="bugun">
+      <div class="card"><h2>Bugün yapacaklarım</h2><div id="todo"></div><div class="two" style="grid-template-columns:1fr auto;margin-top:6px"><input type="text" id="todoIn" placeholder="Yeni iş ekle…"><button id="todoAdd">Ekle</button></div><div style="margin-top:6px"><button id="todoClear" class="small">Tamamlananları temizle</button></div></div>
+      <div class="card"><h2>Öneriler (otomatik)</h2><div id="sugg" class="small"></div></div>
+      <div class="card"><h2>Departman toplantıları</h2><div id="meet" class="small"></div></div>
+    </section>
+    <section data-tab="gundem">
+      <div class="card"><h2>Gündem (Türkiye · yurt dışı · yazılım · pazarlama)</h2><div class="chips" id="newsCats"></div><div id="news" class="small news" style="margin-top:6px"></div><div id="newsMeta" class="small mute" style="margin-top:6px"></div></div>
+      <div class="card"><h2>Günlük pazar radarı (__ASSISTANT__)</h2><div id="radar" class="small"></div></div>
+    </section>
+    <section data-tab="hedef">
+      <div class="card"><h2>Hedefler</h2><div id="goals"></div><button id="goalsSave" style="margin-top:6px">Kaydet</button></div>
+      <div class="card"><h2>LinkedIn</h2><div id="li"></div></div>
+    </section>
+    <section data-tab="sohbet">
+      <div class="card"><h2>__ASSISTANT__ ile sohbet</h2><div id="chatlog"></div><div class="chips" id="chips" style="margin:6px 0"></div><div class="two" style="grid-template-columns:1fr auto"><input type="text" id="chatIn" placeholder="/yardim, /gorev …, /sor …"><button id="chatSend">Gönder</button></div><div class="small mute" style="margin-top:4px">/sor Claude kullanır (≈0,15–0,30 USD; en küçük çağrı bile ≈0,12). Bugünkü Mars harcaması: <b id="costToday">$0.00</b>. Çalışan terminallere komut yollayamaz; ofisin kendi işlerini yapar.</div></div>
+    </section>
+    <section data-tab="ajan">
+      <div class="card" id="detail"><h2>Çalışan</h2><div class="small mute">Bir çalışanın üzerine gelin ya da tıklayın.</div></div>
+      <div class="card"><h2>Rafta bekleyenler</h2><input type="text" id="shelfQ" placeholder="ara…"><div id="shelf" class="small" style="max-height:200px;overflow:auto;margin-top:6px"></div></div>
+    </section>
+    <div class="card small mute">
+      <div><span class="dot" style="background:var(--ok)"></span>çalışıyor <span class="dot" style="background:var(--warn);margin-left:8px"></span>molada <span class="dot" style="background:var(--meet);margin-left:8px"></span>toplantıda</div>
+      <div><span class="dot" style="background:var(--duty)"></span>mesaide <span class="dot" style="background:var(--off);margin-left:8px"></span>dinleniyor</div>
+      <div style="margin-top:4px">Kısayollar: <b>D</b> demo · <b>M</b> toplantı · <b>L</b> limit · <b>O</b> çevrimdışı · <b>N</b> gece/gündüz · <b>Esc</b> ofise dön</div>
+    </div>
+  </aside>
+</div>
+<script>
+(() => {
+"use strict";
+const W = 1448, H = 1086;
+const cv = document.getElementById("c"), g = cv.getContext("2d");
+const qs = new URLSearchParams(location.search);
+let demo = qs.has("demo"), demoOffline = false, demoLimit = false, demoMeeting = false, hourOverride = qs.has("hour") ? Number(qs.get("hour")) : null;
+const EDIT = qs.has("edit");
+let meetings = [];
+const safeUrl = (u) => (/^https?:\/\//i.test(String(u || "")) ? String(u) : "#");
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const ago = (s) => s < 60 ? s + " sn" : s < 3600 ? Math.round(s / 60) + " dk" : Math.round(s / 3600) + " sa";
+const hash = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+const rng = (seed) => () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+
+// ---------- görseller ----------
+const IMG = {};
+const loadImgs = Promise.all([["ofis", "assets/ofis.png"], ["oda", "assets/oda-final.png"], ["sheet", "assets/calisan-temiz.png"]].map(([k, src]) => new Promise((res) => { const i = new Image(); i.onload = () => { IMG[k] = i; res(); }; i.onerror = res; i.src = src; })));
+
+// Sprite sayfası: 4 satır (gömlek rengi) x 16 kare. Koordinatlar sayfadan otomatik ölçüldü.
+const ROWS = [[200, 363], [392, 554], [584, 745], [775, 935]];
+const FR = { idle: [[23, 103], [107, 187]], type: [[203, 284], [285, 367], [370, 451], [454, 535]], walk: [[544, 624], [628, 709], [711, 792], [798, 878]], sleep: [[888, 971], [978, 1065]], coffee: [[1074, 1155], [1160, 1239]], meet: [[1249, 1338], [1338, 1427]] };
+const FPS = { idle: 1.6, type: 7, walk: 8, sleep: 1.1, coffee: 1.6, meet: 1.6 };
+
+// ---------- yuvalar (1448x1086 koordinatları; ?edit=1 ile tıklayarak ayarlanır) ----------
+const SLOTS = {
+  boss: [{ x: 277, y: 235, s: 0.62, anim: "type" }, { x: 170, y: 292, s: 0.58, anim: "idle" }],
+  open: [{ x: 680, y: 535, s: 0.66 }, { x: 806, y: 535, s: 0.66 }, { x: 1072, y: 585, s: 0.66 }, { x: 1192, y: 585, s: 0.66 }, { x: 836, y: 812, s: 0.66 }, { x: 1080, y: 812, s: 0.66 }],
+  meet: [{ x: 178, y: 505, s: 0.42 }, { x: 240, y: 505, s: 0.42 }, { x: 305, y: 505, s: 0.42 }, { x: 365, y: 505, s: 0.42 }, { x: 178, y: 630, s: 0.42 }, { x: 240, y: 630, s: 0.42 }, { x: 305, y: 630, s: 0.42 }, { x: 365, y: 630, s: 0.42 }, { x: 100, y: 565, s: 0.42 }, { x: 435, y: 565, s: 0.42 }],
+  brk: [{ x: 680, y: 262, s: 0.5 }, { x: 716, y: 262, s: 0.5 }, { x: 752, y: 262, s: 0.5 }, { x: 822, y: 290, s: 0.5 }, { x: 912, y: 288, s: 0.5 }, { x: 998, y: 288, s: 0.5 }, { x: 876, y: 175, s: 0.5 }, { x: 945, y: 170, s: 0.5 }],
+  srv: [{ x: 1165, y: 352, s: 0.5 }, { x: 1240, y: 352, s: 0.5 }, { x: 1318, y: 360, s: 0.5 }],
+  door: { x: 725, y: 1000 },
+};
+const ODA = [{ x: 455, y: 425 }, { x: 625, y: 425 }, { x: 815, y: 430 }, { x: 985, y: 430 }, { x: 448, y: 720 }, { x: 618, y: 720 }, { x: 815, y: 720 }, { x: 985, y: 720 }];
+const LAMPS = [[200, 205], [675, 70], [825, 70], [1218, 60], [470, 115], [505, 475], [250, 700], [350, 1020], [640, 925], [800, 925]];
+
+// ---------- durum ----------
+let S = { roster: [], sessions: [], subagents: [], onDuty: [], shifts: [], now: Date.now(), shelved: 0 };
+let agents = new Map(), divisions = [];
+let view = "ofis", page = 0;
+let log = [], prevWorking = new Set(), prevSessions = new Map();
+const actors = new Map();
+const addLog = (t) => { log.unshift({ at: new Date(), t }); log = log.slice(0, 60); };
+const STATE_TR = { working: "çalışıyor", break: "molada", meeting: "toplantıda", onduty: "mesaide, boşta", off: "mesai dışı, dinleniyor" };
+const COLORS = { working: "#7bd36b", break: "#f2c14e", meeting: "#b06bff", onduty: "#6fb3ff", off: "#6f7d96" };
+const byName = (a, b) => a.r.name.localeCompare(b.r.name);
+
+function buildAgents() {
+  const map = new Map();
+  const counts = {};
+  for (const r of S.roster) counts[r.division] = (counts[r.division] || 0) + 1;
+  divisions = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).map((name, i) => ({ name, row: i % 4 }));
+  for (const r of S.roster) map.set(r.slug, { r, state: "off", tool: null, desc: "", row: divisions.find((d) => d.name === r.division)?.row ?? 0, seed: hash(r.slug) });
+  agents = map;
+}
+
+function demoOverlay() {
+  const rnd = rng(Math.floor(Date.now() / 20000));
+  const slugs = S.roster.map((r) => r.slug), tools = ["Bash", "Edit", "Read", "Grep", "WebSearch", "Write"];
+  const pick = () => slugs[Math.floor(rnd() * slugs.length)];
+  const sub = [];
+  for (let i = 0; i < 14; i++) sub.push({ id: "d" + i, slug: pick(), agentType: "demo", state: "working", ageSec: 5, lastTool: { tool: tools[i % tools.length] }, description: "demo görevi" });
+  for (let i = 0; i < 10; i++) sub.push({ id: "r" + i, slug: pick(), agentType: "demo", state: "recent", ageSec: 400 });
+  return { subagents: sub, sessions: [
+    { id: "s1", project: "dev/proje-a", title: "Ana terminal", state: "working", ageSec: 3, lastTool: { tool: "Edit", hint: "app/page.tsx" } },
+    { id: "s2", project: "dev/proje-b", title: "proje-b", state: "waiting", ageSec: 200, lastTool: { tool: "Bash", hint: "npm run build" } },
+    { id: "s3", project: "dev/proje-c", title: "proje-c", state: "working", ageSec: 9, lastTool: { tool: "Read", hint: "page.tsx" } } ] };
+}
+
+function applyState() {
+  const data = demo ? { ...S, ...demoOverlay() } : S;
+  if (!agents.size || agents.size !== data.roster.length) buildAgents();
+  const duty = new Set(data.onDuty || []), act = new Map();
+  for (const s of data.subagents) {
+    if (!s.slug) continue;
+    const st = s.state === "working" ? "working" : s.state === "recent" ? "break" : null;
+    if (!st) continue;
+    const cur = act.get(s.slug);
+    if (!cur || (st === "working" && cur.state !== "working")) act.set(s.slug, { state: st, tool: s.lastTool?.tool || null, desc: s.description, text: s.lastText || "" });
+  }
+  const limit = demoLimit ? { text: "You've hit your session limit · resets 9:10am (Europe/Istanbul)", resetsAt: new Date(Date.now() + 3 * 3600e3).toISOString() } : data.limit;
+  const offline = demoOffline || (data.net && data.net.online === false);
+  const meetDepts = new Set();
+  for (const sx of data.sessions) { const m = /^Toplantı:\s*(.+)$/.exec(sx.title || ""); if (m && sx.state !== "sleeping") meetDepts.add(m[1].trim().toLowerCase()); }
+  if (demoMeeting) meetDepts.add("mühendislik");
+  S._limit = limit || null; S._meet = meetDepts; S._view = data; S._offline = offline;
+  const working = new Set();
+  for (const a of agents.values()) {
+    const x = act.get(a.r.slug);
+    let st = x ? x.state : duty.has(a.r.slug) ? "onduty" : "off";
+    if (meetDepts.has(a.r.division.toLowerCase()) && st !== "working") st = "meeting";
+    const ov = data.overrides?.[a.r.slug]; a.override = ov?.mode || null;
+    if (ov && st !== "working" && st !== "meeting") st = ov.mode === "break" ? "break" : st === "off" ? "onduty" : st;
+    if (limit || offline) st = "off";
+    a.state = st; a.tool = x?.tool || null; a.desc = x?.desc || ""; a.text = x?.text || "";
+    if (st === "working") working.add(a.r.slug);
+  }
+  for (const slug of working) if (!prevWorking.has(slug)) { const a = agents.get(slug); addLog(`${a.r.name} göreve başladı${a.tool ? " · " + a.tool : ""}`); }
+  for (const slug of prevWorking) if (!working.has(slug) && agents.get(slug)) addLog(`${agents.get(slug).r.name} mola verdi`);
+  prevWorking = working;
+  const curS = new Map(data.sessions.map((s) => [s.id, s.state]));
+  for (const [id, st] of curS) { const p = prevSessions.get(id); if (p && p !== st) { const s = data.sessions.find((z) => z.id === id); addLog(`Terminal “${s.title}” ${st === "working" ? "çalışmaya başladı" : st === "waiting" ? "yanıt bekliyor" : "uykuda"}`); } }
+  prevSessions = curS;
+  assignOffice();
+  renderSide(data, working.size);
+}
+
+// ---------- ofis yerleşimi ----------
+function assignOffice() {
+  const list = [...agents.values()];
+  const boss = list.filter((a) => /chief of staff|orchestrator/i.test(a.r.name)).sort(byName).slice(0, 2);
+  const bossSet = new Set(boss.map((a) => a.r.slug));
+  const rest = list.filter((a) => !bossSet.has(a.r.slug));
+  const want = [];
+  boss.forEach((a, i) => want.push({ key: a.r.slug, a, slot: SLOTS.boss[i], anim: a.state === "working" ? "type" : SLOTS.boss[i].anim }));
+  const place = (arr, slots, anim) => arr.slice(0, slots.length).forEach((a, i) => want.push({ key: a.r.slug, a, slot: slots[i], anim }));
+  place(rest.filter((a) => a.state === "working").sort(byName), SLOTS.open, "type");
+  place(rest.filter((a) => a.state === "meeting").sort(byName), SLOTS.meet, "meet");
+  place(rest.filter((a) => a.state === "break").sort(byName), SLOTS.brk, "coffee");
+  const sess = (S._view?.sessions || []).filter((s) => s.state !== "sleeping").slice(0, SLOTS.srv.length);
+  sess.forEach((s, i) => { const fake = { r: { slug: "sess:" + s.id, name: s.title, emoji: "💻", division: "Terminal", description: s.project }, state: s.state === "working" ? "working" : "onduty", tool: s.lastTool?.tool || null, desc: s.lastTool?.hint || "", row: 1, seed: hash(s.id) }; want.push({ key: fake.r.slug, a: fake, slot: SLOTS.srv[i], anim: s.state === "working" ? "type" : "idle", session: true }); });
+  const keep = new Set(want.map((w) => w.key));
+  for (const w of want) {
+    let ac = actors.get(w.key);
+    if (!ac) { ac = { x: SLOTS.door.x, y: SLOTS.door.y }; actors.set(w.key, ac); }
+    Object.assign(ac, { a: w.a, tx: w.slot.x, ty: w.slot.y, scale: w.slot.s, anim: w.anim, leaving: false, session: !!w.session });
+  }
+  for (const [k, ac] of actors) if (!keep.has(k)) { ac.tx = SLOTS.door.x; ac.ty = SLOTS.door.y; ac.leaving = true; }
+}
+
+// ---------- çizim ----------
+function drawFrame(row, anim, t, x, y, scale, seed = 0) {
+  const arr = FR[anim], idx = Math.floor((t / 1000) * FPS[anim] + seed) % arr.length;
+  const [x0, x1] = arr[idx], [y0, y1] = ROWS[row % 4];
+  const w = (x1 - x0) * scale, h = (y1 - y0) * scale;
+  g.drawImage(IMG.sheet, x0, y0, x1 - x0, y1 - y0, Math.round(x - w / 2), Math.round(y - h), Math.round(w), Math.round(h));
+  return { w, h };
+}
+function label(text, x, y, color, size = 15) {
+  g.font = `bold ${size}px "Courier New", monospace`; const tw = g.measureText(text).width + 10;
+  g.fillStyle = "rgba(20,14,8,0.82)"; g.fillRect(Math.round(x - tw / 2), Math.round(y - size - 3), Math.round(tw), size + 7);
+  g.fillStyle = color; g.fillRect(Math.round(x - tw / 2), Math.round(y - size - 3), 3, size + 7);
+  g.fillStyle = "#f3e7cf"; g.textAlign = "center"; g.fillText(text, x + 1, y - 2); g.textAlign = "start";
+}
+function toolBubble(tool, x, y, size) {
+  g.font = `bold ${size}px monospace`; const tw = g.measureText(tool).width + 10;
+  g.fillStyle = "#f3e7cf"; g.fillRect(Math.round(x), Math.round(y), Math.round(tw), size + 6);
+  g.fillStyle = "#2a1f17"; g.fillText(tool, Math.round(x + 5), Math.round(y + size));
+}
+function openDetail() { setTab("ajan"); return document.getElementById("detail"); }
+const hits = [];
+function nightness(d) { const h = hourOverride ?? (d.getHours() + d.getMinutes() / 60); if (h >= 21 || h < 5) return 1; if (h >= 18) return (h - 18) / 3; if (h < 8) return 1 - (h - 5) / 3; return 0; }
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  requestAnimationFrame(frame);
+  if (!IMG.ofis || !IMG.sheet || !IMG.oda) return;
+  hits.length = 0;
+  g.clearRect(0, 0, W, H);
+  if (view === "ofis") drawOffice(now, dt); else drawRoom(now);
+  const d = new Date(), night = nightness(d);
+  if (night > 0) {
+    g.fillStyle = `rgba(14,22,70,${(0.42 * night).toFixed(2)})`; g.fillRect(0, 0, W, H);
+    if (view === "ofis") for (const [lx, ly] of LAMPS) { const gr = g.createRadialGradient(lx, ly, 4, lx, ly, 110); gr.addColorStop(0, `rgba(255,214,120,${(0.55 * night).toFixed(2)})`); gr.addColorStop(1, "rgba(255,214,120,0)"); g.fillStyle = gr; g.fillRect(lx - 110, ly - 110, 220, 220); }
+  }
+  if (S._limit) {
+    g.fillStyle = "rgba(20,10,50,0.55)"; g.fillRect(0, 0, W, H);
+    g.fillStyle = "#e5c9ff"; g.font = "bold 44px monospace"; g.textAlign = "center";
+    g.fillText("💤 LİMİT DOLDU — OFİS DİNLENİYOR", W / 2, H / 2 - 8);
+    g.font = "22px monospace"; g.fillText((S.handoff ? "Devir notu yazıldı." : "Devir notu yazılacak.") + " Limit sıfırlanınca ofis uyanır.", W / 2, H / 2 + 34); g.textAlign = "start";
+  }
+  if (S._offline && !S._limit) {
+    g.fillStyle = "rgba(8,24,48,0.58)"; g.fillRect(0, 0, W, H);
+    g.fillStyle = "#cfe6ff"; g.font = "bold 44px monospace"; g.textAlign = "center";
+    g.fillText("📡 BAĞLANTI YOK — OFİS UYKUDA", W / 2, H / 2 - 8);
+    g.font = "22px monospace"; g.fillText("İnternet gelince ofis kendiliğinden uyanır. Yerel işler (görevler, notlar) çalışır.", W / 2, H / 2 + 34); g.textAlign = "start";
+  }
+  if (EDIT) { g.fillStyle = "rgba(255,0,80,.85)"; const all = view === "ofis" ? [...SLOTS.boss, ...SLOTS.open, ...SLOTS.meet, ...SLOTS.brk, ...SLOTS.srv, SLOTS.door] : ODA; for (const p of all) g.fillRect(p.x - 4, p.y - 4, 8, 8); }
+  document.getElementById("clock").textContent = d.toLocaleDateString("tr-TR", { weekday: "short" }) + " " + d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) + (night > 0.6 ? " 🌙" : night > 0 ? " 🌆" : " ☀");
+}
+
+function bubble(text, x, y) {
+  g.font = "bold 15px 'Courier New', monospace";
+  const words = String(text).split(" "), lines = []; let cur = "";
+  for (const w of words) { if ((cur + " " + w).trim().length > 34) { lines.push(cur); cur = w; } else cur = (cur + " " + w).trim(); }
+  if (cur) lines.push(cur);
+  const bw = Math.max(...lines.map((l) => g.measureText(l).width)) + 20, bh = lines.length * 20 + 14;
+  g.fillStyle = "#f3e7cf"; g.fillRect(Math.round(x), Math.round(y - bh), Math.round(bw), bh);
+  g.beginPath(); g.moveTo(x + 18, y); g.lineTo(x + 34, y); g.lineTo(x + 20, y + 14); g.closePath(); g.fill();
+  g.fillStyle = "#2a1f17"; lines.forEach((l, i) => g.fillText(l, x + 10, y - bh + 24 + i * 20));
+}
+function drawOffice(t, dt) {
+  g.drawImage(IMG.ofis, 0, 0, W, H);
+  label(`Arşiv · ${S.shelved || 0} ajan rafta`, 245, 1010, "#cdbf9d", 16);
+  for (const [k, ac] of [...actors.entries()]) {
+    const dx = ac.tx - ac.x, dy = ac.ty - ac.y, dist = Math.hypot(dx, dy);
+    if (dist > 2) { const v = Math.min(dist, 190 * dt); ac.x += (dx / dist) * v; ac.y += (dy / dist) * v; } else { ac.x = ac.tx; ac.y = ac.ty; if (ac.leaving) actors.delete(k); }
+  }
+  const draw = [...actors.values()].sort((p, q) => p.y - q.y);
+  for (const ac of draw) {
+    const walking = Math.hypot(ac.tx - ac.x, ac.ty - ac.y) > 2;
+    const size = drawFrame(ac.a.row, walking ? "walk" : ac.anim, t, ac.x, ac.y, walking ? ac.scale * 0.85 : ac.scale, ac.a.seed % 3);
+    if (ac.leaving) continue;
+    const crowded = ac.scale < 0.55, stagger = crowded ? ((Math.round(ac.x / 30) % 2) * 15) : 0;
+    label(String(ac.a.r.name).slice(0, crowded ? 11 : 14), ac.x, ac.y - size.h - 4 - stagger, COLORS[ac.a.state] || "#fff", crowded ? 11 : 14);
+    if (ac.a.state === "working" && ac.a.tool && !walking) toolBubble(ac.a.tool, ac.x + 16, ac.y - size.h - 34, 13);
+    hits.push({ a: ac.a, x: ac.x - size.w / 2, y: ac.y - size.h, w: size.w, h: size.h });
+  }
+  const marsLines = S.briefing?.lines;
+  const boss = [...actors.values()].find((x) => /chief of staff/i.test(x.a.r.name) && !x.leaving);
+  if (boss && marsLines?.length && !S._limit && !S._offline) bubble(marsLines[Math.floor(t / 7000) % marsLines.length], boss.x + 40, boss.y - 150);
+  const shown = [...actors.values()].filter((x) => x.anim === "type" && !x.session && !x.leaving && x.a.state === "working").length;
+  const totalWorking = [...agents.values()].filter((a) => a.state === "working").length;
+  const bossWorking = [...actors.values()].filter((x) => x.anim === "type" && !x.session && x.ty < 400 && x.tx < 400 && !x.leaving).length;
+  if (totalWorking > shown + bossWorking && totalWorking > shown) label(`+${totalWorking - shown} çalışan daha (departman odalarında)`, 905, 960, "#7bd36b", 16);
+}
+
+function roomAgents() {
+  const order = { working: 0, meeting: 1, break: 2, onduty: 3, off: 4 };
+  return [...agents.values()].filter((a) => a.r.division === view).sort((p, q) => order[p.state] - order[q.state] || byName(p, q));
+}
+function drawRoom(t) {
+  g.drawImage(IMG.oda, 0, 0, W, H);
+  const list = roomAgents(), pages = Math.max(1, Math.ceil(list.length / 8));
+  page = Math.max(0, Math.min(page, pages - 1));
+  list.slice(page * 8, page * 8 + 8).forEach((a, i) => {
+    const p = ODA[i];
+    let size;
+    if (a.state === "onduty") { // mesaide, boşta: yazma karesi sabit (sakin oturuş)
+      const [x0, x1] = FR.type[0], [y0, y1] = ROWS[a.row % 4], w = (x1 - x0) * 0.8, h = (y1 - y0) * 0.8;
+      g.drawImage(IMG.sheet, x0, y0, x1 - x0, y1 - y0, Math.round(p.x - w / 2), Math.round(p.y - h), Math.round(w), Math.round(h)); size = { w, h };
+    } else {
+      const anim = a.state === "working" ? "type" : a.state === "meeting" ? "meet" : a.state === "break" ? "coffee" : "sleep";
+      size = drawFrame(a.row, anim, t, p.x, p.y, 0.8, a.seed % 3);
+    }
+    label(String(a.r.name).slice(0, 16), p.x, p.y - size.h - 4, COLORS[a.state], 15);
+    if (a.state === "working" && a.tool) toolBubble(a.tool, p.x + 30, p.y - size.h - 40, 14);
+    hits.push({ a, x: p.x - size.w / 2, y: p.y - size.h, w: size.w, h: size.h });
+  });
+  g.font = "bold 28px 'Courier New', monospace"; g.fillStyle = "rgba(20,14,8,0.85)"; g.fillRect(36, 20, 600, 44); g.fillStyle = "#f5a623";
+  g.fillText(`${view.toUpperCase()}  ·  ${list.length} ajan  ·  sayfa ${page + 1}/${pages}`, 48, 52);
+}
+
+// ---------- yan panel ----------
+function renderSide(data, workingN) {
+  const counts = { working: 0, break: 0, meeting: 0, onduty: 0, off: 0 };
+  for (const a of agents.values()) counts[a.state]++;
+  document.getElementById("stats").innerHTML =
+    `<div><span class="dot" style="background:var(--ok)"></span>Çalışıyor <b>${counts.working}</b></div><div><span class="dot" style="background:var(--warn)"></span>Molada <b>${counts.break}</b></div>` +
+    `<div><span class="dot" style="background:var(--meet)"></span>Toplantıda <b>${counts.meeting}</b></div><div><span class="dot" style="background:var(--duty)"></span>Mesaide <b>${counts.onduty}</b></div>` +
+    `<div><span class="dot" style="background:var(--off)"></span>Dinleniyor <b>${counts.off}</b></div><div class="mute">Toplam <b>${data.roster.length}</b> · terminal <b>${data.sessions.filter((s) => s.state !== "sleeping").length}</b></div>`;
+  document.getElementById("shiftName").textContent = (data.shifts || []).map((s) => `${s.name} ${s.from}–${s.to}`).join(" · ") || "Şu an tanımlı vardiya yok";
+  const rooms = document.getElementById("rooms");
+  rooms.innerHTML = `<button data-v="ofis" class="${view === "ofis" ? "on" : ""}" style="grid-column:1/3">🏢 Ofis (genel)</button>` + divisions.map((d) => {
+    const m = [...agents.values()].filter((a) => a.r.division === d.name), w = m.filter((a) => a.state === "working").length;
+    return `<button data-v="${esc(d.name)}" class="${view === d.name ? "on" : ""}">${esc(d.name)} ${m.length}${w ? ` <span style="color:#7bd36b">●${w}</span>` : ""}</button>`;
+  }).join("");
+  rooms.querySelectorAll("button").forEach((b) => { b.onclick = () => setView(b.dataset.v); });
+  const col = { working: "var(--ok)", waiting: "var(--warn)", sleeping: "var(--off)" };
+  document.getElementById("sessions").innerHTML = data.sessions.filter((s) => s.state !== "sleeping").slice(0, 8).map((s) =>
+    `<div class="li"><span class="dot" style="background:${col[s.state]}"></span><b>${esc(s.title)}</b> <span class="mute">${esc(s.project)} · ${ago(s.ageSec)}</span>${s.lastTool ? `<div class="mute">${esc(s.lastTool.tool)} ${esc(s.lastTool.hint)}</div>` : ""}</div>`).join("") || `<div class="mute">Aktif terminal yok.</div>`;
+  const wk = [...agents.values()].filter((a) => a.state === "working").slice(0, 12);
+  document.getElementById("doing").innerHTML = wk.map((a) => `<div class="li"><b>${esc(a.r.emoji)} ${esc(a.r.name)}</b><div class="mute">${esc(a.tool || "")}${a.desc ? " · " + esc(a.desc.slice(0, 90)) : ""}</div></div>`).join("") || `<div class="mute">Şu an çalışan yok.</div>`;
+  const srvEv = (S.events || []).map((e) => ({ at: new Date(e.at), t: (e.level === "alert" ? "🚨 " : e.level === "warn" ? "⚠ " : "") + e.text }));
+  const allEv = [...log, ...srvEv].sort((p, q) => q.at - p.at).filter((e, i, a) => a.findIndex((z) => z.t === e.t && Math.abs(z.at - e.at) < 2000) === i);
+  document.getElementById("log").innerHTML = allEv.slice(0, 30).map((l) => `<div class="li"><span class="mute">${l.at.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span> ${esc(l.t)}</div>`).join("") || `<div class="mute">Henüz olay yok.</div>`;
+  const idle = !demo && workingN === 0 && data.subagents.filter((s) => s.state === "working").length === 0;
+  const b = document.getElementById("banner"); b.style.display = idle ? "block" : "none";
+  b.textContent = "Şu an çalışan bir ajan yok (ofis sakin). Ajanlar ayrı terminallerde çalıştıkça burada görünür. Önizleme için D tuşu.";
+  renderLimit(); renderMeet(); renderViewbar(); renderAll();
+}
+function renderViewbar() {
+  const bar = document.getElementById("viewbar");
+  if (view === "ofis") { bar.innerHTML = ""; return; }
+  const pages = Math.max(1, Math.ceil(roomAgents().length / 8));
+  bar.innerHTML = `<button id="vb0">← Ofise dön</button><button id="vbp">◀</button><button id="vbn">▶</button>`;
+  document.getElementById("vb0").onclick = () => setView("ofis");
+  document.getElementById("vbp").onclick = () => { page = Math.max(0, page - 1); };
+  document.getElementById("vbn").onclick = () => { page = Math.min(pages - 1, page + 1); };
+}
+function setView(v) { view = v; page = 0; renderSide(S._view || S, 0); }
+function renderLimit() {
+  const box = document.getElementById("limitBox"), lim = S._limit;
+  if (!lim) { box.style.display = "none"; return; }
+  const left = lim.resetsAt ? Math.max(0, Math.round((new Date(lim.resetsAt) - Date.now()) / 60000)) : null;
+  box.style.display = "block";
+  box.innerHTML = `<b>💤 Claude limiti doldu — ofis dinleniyor</b><div class="mute">${esc(lim.text || "")}</div>${left !== null ? `<div>Sıfırlanmaya: <b>${Math.floor(left / 60)} sa ${left % 60} dk</b></div>` : ""}<div style="margin-top:4px">Devir notu: ${S.handoff ? "<b>yazıldı</b> (handoff/LATEST.md)" : "henüz yok"}</div><button id="hoShow">Devir notunu göster</button> <button id="hoWrite">Şimdi yaz</button>`;
+  document.getElementById("hoShow").onclick = showHandoff;
+  document.getElementById("hoWrite").onclick = async () => { await fetch("/api/handoff", { method: "POST" }).catch(() => {}); showHandoff(); };
+}
+async function showHandoff() {
+  const r = await fetch("/api/handoff/latest").then((x) => x.json()).catch(() => ({ text: "" }));
+  openDetail().innerHTML = `<h2>Devir notu</h2><div class="small mute">Başka bir yapay zekaya (ChatGPT, Codex…) yapıştırın; “Açık işler”den devam eder.</div><pre>${esc(r.text || "(henüz yazılmadı)")}</pre><button id="hoCopy">Kopyala</button>`;
+  document.getElementById("hoCopy").onclick = () => navigator.clipboard?.writeText(r.text || "");
+}
+function renderMeet() {
+  const el = document.getElementById("meet");
+  const live = [...(S._meet || [])].map((d) => `<div class="li"><span class="dot" style="background:var(--meet)"></span><b>Toplantıda:</b> ${esc(d)}</div>`).join("");
+  el.innerHTML = live + (meetings.length ? meetings.slice(0, 8).map((m) => `<div class="li"><span class="link" data-f="${esc(m.file)}">${esc(m.title)}</span></div>`).join("") : `<div class="mute">Henüz toplantı yok.</div>`) + `<div class="mute" style="margin-top:4px">Başlat: <code>bin/farm-meeting "Mühendislik"</code></div>`;
+  el.querySelectorAll(".link").forEach((n) => { n.onclick = async () => { const r = await fetch("/api/meetings/" + encodeURIComponent(n.dataset.f)).then((x) => x.json()).catch(() => ({ text: "" })); openDetail().innerHTML = `<h2>Toplantı notu</h2><pre>${esc(r.text)}</pre>`; }; });
+}
+async function loadMeetings() { try { meetings = await fetch("/api/meetings", { cache: "no-store" }).then((x) => x.json()); renderMeet(); } catch { /* yok */ } }
+function showDetail(a) {
+  const cmd = `claude --agent "${a.r.name}" -n "${a.r.name}"`, isAgent = !String(a.r.slug).startsWith("sess:");
+  const ov = a.override ? ` · <b>${a.override === "break" ? "molaya alındı" : "mesaiye alındı"}</b>` : "";
+  openDetail().innerHTML = `<h2>${esc(a.r.emoji)} ${esc(a.r.division)}</h2><div><b style="color:var(--accent)">${esc(a.r.name)}</b></div>
+    <div class="small">Durum: <b>${STATE_TR[a.state] || a.state}</b>${a.tool ? " · " + esc(a.tool) : ""}${ov}</div>
+    <div class="small mute" style="margin:4px 0">${esc(a.r.description)}</div>
+    ${a.text ? `<div class="small"><b>Son çıktı:</b></div><div class="small mute" style="background:#14100c;padding:5px;border-radius:4px;margin:3px 0">${esc(a.text)}</div>` : ""}
+    ${isAgent ? `<div class="chips" style="margin:6px 0"><button data-c="/mola">☕ Molaya al</button><button data-c="/mesai">💼 Mesaiye al</button><button data-c="/normal">↺ Normal</button><button data-c="/ac" data-confirm="1">🖥 Terminalde aç</button><button data-c="/rafa" data-confirm="1">📦 Rafa kaldır</button></div>` : ""}
+    <div class="small">Komut:</div><code>${esc(cmd)}</code><button id="cp">Kopyala</button>`;
+  document.getElementById("cp").onclick = () => navigator.clipboard?.writeText(cmd);
+  document.querySelectorAll("#detail [data-c]").forEach((b) => { b.onclick = async () => {
+    if (b.dataset.confirm && !confirm(`${a.r.name}: "${b.textContent.trim()}" işlemi uygulansın mı?`)) return;
+    const r = await api("/api/chat", { text: `${b.dataset.c} ${a.r.slug}`, confirm: Boolean(b.dataset.confirm) });
+    addChat("mars", r.reply || "Tamam"); poll();
+  }; });
+}
+
+// ---------- etkileşim ----------
+const tip = document.getElementById("tip");
+const toWorld = (e) => { const b = cv.getBoundingClientRect(); return { x: (e.clientX - b.left) * W / b.width, y: (e.clientY - b.top) * H / b.height, b }; };
+cv.addEventListener("mousemove", (e) => {
+  const { x, y, b } = toWorld(e), h = hits.find((k) => x >= k.x && x <= k.x + k.w && y >= k.y && y <= k.y + k.h);
+  if (!h) { tip.style.display = "none"; return; }
+  tip.innerHTML = `<b>${esc(h.a.r.emoji)} ${esc(h.a.r.name)}</b><br>${esc(h.a.r.division)} · ${STATE_TR[h.a.state] || ""}${h.a.tool ? " · " + esc(h.a.tool) : ""}${h.a.desc ? "<br>" + esc(h.a.desc.slice(0, 90)) : ""}`;
+  tip.style.display = "block"; tip.style.left = Math.min(e.clientX - b.left + 14, b.width - 310) + "px"; tip.style.top = (e.clientY - b.top + 14) + "px";
+});
+cv.addEventListener("mouseleave", () => { tip.style.display = "none"; });
+cv.addEventListener("click", (e) => {
+  const { x, y } = toWorld(e);
+  if (EDIT) { const t = `{ x: ${Math.round(x)}, y: ${Math.round(y)} }`; navigator.clipboard?.writeText(t); openDetail().innerHTML = `<h2>Koordinat</h2><code>${t}</code>`; return; }
+  const h = hits.find((k) => x >= k.x && x <= k.x + k.w && y >= k.y && y <= k.y + k.h); if (h) showDetail(h.a);
+});
+addEventListener("keydown", (e) => {
+  const k = e.key;
+  if (k === "d" || k === "D") { demo = !demo; applyState(); }
+  if (k === "l" || k === "L") { demoLimit = !demoLimit; applyState(); }
+  if (k === "m" || k === "M") { demoMeeting = !demoMeeting; applyState(); }
+  if (k === "o" || k === "O") { demoOffline = !demoOffline; applyState(); }
+  if (k === "n" || k === "N") hourOverride = hourOverride === null ? 23 : hourOverride === 23 ? 12 : null;
+  if (k === "Escape") setView("ofis");
+  if (k === "ArrowRight") page++;
+  if (k === "ArrowLeft") page = Math.max(0, page - 1);
+});
+
+
+// ---------- API, sekmeler, ek paneller ----------
+let TOKEN = null;
+async function getToken() { TOKEN = (await fetch("/api/token").then((r) => r.json())).token; }
+async function api(path, body) {
+  if (!TOKEN) await getToken();
+  const go = () => fetch(path, { method: "POST", headers: { "content-type": "application/json", "x-farm-token": TOKEN }, body: JSON.stringify(body || {}) });
+  let r = await go(); if (r.status === 403) { await getToken(); r = await go(); }
+  return r.json().catch(() => ({}));
+}
+let tab = "ofis";
+function setTab(n) {
+  tab = n;
+  document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === n));
+  document.querySelectorAll("aside section").forEach((x) => { x.style.display = x.dataset.tab === n ? "flex" : "none"; });
+  if (n === "gundem") loadRadar();
+  if (n === "ajan") loadShelf();
+  if (n === "sohbet") renderChat();
+  if (n === "hedef") { delete sig.goals; delete sig.li; renderGoals(); renderLinkedin(); }
+}
+document.querySelectorAll("#tabs button").forEach((b) => { b.onclick = () => setTab(b.dataset.tab); });
+
+const sig = {};
+// Yazı yazarken (input odaktayken) paneli yeniden çizmeyelim; veri değişmediyse de çizmeyelim.
+function once(key, data, el, fn) {
+  const sg = JSON.stringify(data); if (sig[key] === sg) return;
+  if (el.contains(document.activeElement) && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  sig[key] = sg; fn();
+}
+const ts = (t) => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? "şimdi" : m < 60 ? m + " dk" : m < 1440 ? Math.round(m / 60) + " sa" : Math.round(m / 1440) + " g"; };
+
+function renderMars() {
+  const b = S.briefing; if (!b) return;
+  const mood = { calm: "😌 sakin", busy: "🔥 yoğun", alert: "🚨 alarm", sleep: "😴 uykuda" }[b.mood] || "";
+  once("mars", b, document.getElementById("mars"), () => { document.getElementById("mars").innerHTML = `<div class="row"><span class="who">MARS</span><span class="small mute">${mood}</span></div><div class="bubble">${esc(b.text)}</div>`; });
+}
+function renderNetBox() {
+  const box = document.getElementById("netBox"), off = S._offline;
+  if (!off) { box.style.display = "none"; return; }
+  const n = S.net || {};
+  box.style.display = "block";
+  box.innerHTML = `<b>📡 İnternet yok — ofis uykuda</b><div>${esc(n.analysis || "Bağlantı bekleniyor.")}</div>${n.since ? `<div class="mute">Kesinti: ${ts(n.since)} önce başladı</div>` : ""}`;
+}
+function renderHealth() {
+  const h = S.health; if (!h) return;
+  once("health", h.results, document.getElementById("health"), () => {
+    document.getElementById("health").innerHTML = (h.results.length ? h.results.map((r) => `<div class="li"><span class="dot" style="background:${r.ok ? "var(--ok)" : "#e5484d"}"></span>${esc(r.name)} <span class="mute">${r.ok ? r.ms + " ms" : "ERİŞİLEMİYOR " + (r.status || "")}</span></div>`).join("") : `<div class="mute">İlk kontrol bekleniyor…</div>`) + (h.checkedAt ? `<div class="mute" style="margin-top:4px">Son kontrol: ${ts(h.checkedAt)} önce · 90 sn'de bir</div>` : "");
+  });
+}
+function renderToday() {
+  const items = S.today || [], el = document.getElementById("todo");
+  once("today", items, el, () => {
+    el.innerHTML = items.length ? items.map((i) => `<div class="tk ${i.done ? "done" : ""}"><button data-t="${i.id}">${i.done ? "☑" : "☐"}</button><span style="flex:1">${esc(i.text)}<div class="mute small">${esc(i.source || "")}</div></span><button data-d="${i.id}" title="Sil">✕</button></div>`).join("") : `<div class="mute">Liste boş. Aşağıdan ekleyin ya da önerilerden seçin.</div>`;
+    el.querySelectorAll("[data-t]").forEach((b) => { b.onclick = async () => { await api("/api/today", { op: "toggle", id: b.dataset.t }); poll(); }; });
+    el.querySelectorAll("[data-d]").forEach((b) => { b.onclick = async () => { await api("/api/today", { op: "delete", id: b.dataset.d }); poll(); }; });
+  });
+  const sg = S.suggestions || [], se = document.getElementById("sugg");
+  once("sugg", sg, se, () => {
+    se.innerHTML = sg.length ? sg.map((x, i) => `<div class="li"><button data-s="${i}" title="Listeye ekle">＋</button> ${esc(x.text)}<div class="mute">${esc(x.source)}</div></div>`).join("") : `<div class="mute">Şimdilik öneri yok.</div>`;
+    se.querySelectorAll("[data-s]").forEach((b) => { b.onclick = async () => { const x = sg[Number(b.dataset.s)]; await api("/api/today", { op: "add", text: x.text, source: x.source }); poll(); }; });
+  });
+}
+let newsCat = "Hepsi";
+function renderNews() {
+  const n = S.news; if (!n) return;
+  const cats = ["Hepsi", ...new Set(n.items.map((i) => i.cat))];
+  once("news" + newsCat, [n.fetchedAt, newsCat], document.getElementById("news"), () => {
+    document.getElementById("newsCats").innerHTML = cats.map((c) => `<button class="${c === newsCat ? "on" : ""}" data-c="${esc(c)}">${esc(c)}</button>`).join("");
+    document.getElementById("newsCats").querySelectorAll("button").forEach((b) => { b.onclick = () => { newsCat = b.dataset.c; delete sig["news" + newsCat]; renderNews(); }; });
+    document.getElementById("news").innerHTML = n.items.filter((i) => newsCat === "Hepsi" || i.cat === newsCat).slice(0, 24).map((i) => `<div class="li"><a href="${esc(safeUrl(i.link))}" target="_blank" rel="noopener">${esc(i.title)}</a><div class="mute">${esc(i.source)} · ${ts(i.ts)} önce</div></div>`).join("") || `<div class="mute">Gündem verisi bekleniyor…</div>`;
+    const bad = (n.status || []).filter((x) => !x.ok);
+    document.getElementById("newsMeta").textContent = `Güncelleme: ${n.fetchedAt ? ts(n.fetchedAt) + " önce" : "—"} · ${(n.status || []).filter((x) => x.ok).length}/${(n.status || []).length} kaynak${bad.length ? " (sorunlu: " + bad.map((b) => b.name).join(", ") + ")" : ""}`;
+  });
+}
+let radarText = "";
+async function loadRadar() { radarText = (await fetch("/api/radar/latest").then((r) => r.json()).catch(() => ({ text: "" }))).text; delete sig.radar; renderRadar(); }
+function renderRadar() {
+  const r = S.radar || {}, el = document.getElementById("radar");
+  once("radar", [r, radarText], el, () => {
+    el.innerHTML = `<div class="row"><span>Otomatik günlük radar: <b>${r.enabled ? "AÇIK (" + esc(r.time) + ")" : "kapalı"}</b></span><button id="rdTog">${r.enabled ? "Kapat" : "Aç"}</button></div>
+      <div class="mute">Her sabah Türkiye + yurt dışı + yazılım + SEO gündeminden ajansa fırsat/risk ve LinkedIn fikri çıkarır (Claude kullanır ≈0,3–0,6 USD/gün; limit doluyken çalışmaz).</div>
+      <div style="margin:6px 0"><button id="rdRun" ${r.busy ? "disabled" : ""}>${r.busy ? "Hazırlanıyor…" : "Şimdi çalıştır"}</button></div>${radarText ? `<pre>${esc(radarText)}</pre>` : `<div class="mute">Henüz radar notu yok.</div>`}`;
+    document.getElementById("rdTog").onclick = async () => { await api("/api/chat", { text: "/radar " + (r.enabled ? "kapat" : "ac"), confirm: true }); poll(); };
+    document.getElementById("rdRun").onclick = async () => { await api("/api/radar/run"); poll(); setTimeout(loadRadar, 90000); };
+  });
+}
+function renderGoals() {
+  const gs = S.goals || [], el = document.getElementById("goals");
+  once("goals", gs, el, () => {
+    el.innerHTML = gs.map((g, i) => { const pct = g.target ? Math.min(100, Math.round((g.current / g.target) * 100)) : 0; return `<div style="margin-bottom:8px"><b>${esc(g.title)}</b><div class="bar"><i style="width:${pct}%"></i></div><div class="two"><label class="small mute">Şu an<input type="number" data-g="${i}" data-k="current" value="${g.current ?? 0}"></label><label class="small mute">Hedef (${esc(g.unit)})<input type="number" data-g="${i}" data-k="target" value="${g.target ?? ""}" placeholder="belirleyin"></label></div>${g.note ? `<div class="small mute">${esc(g.note)}</div>` : ""}</div>`; }).join("");
+  });
+}
+document.getElementById("goalsSave").onclick = async () => {
+  const gs = JSON.parse(JSON.stringify(S.goals || []));
+  document.querySelectorAll("#goals input").forEach((i) => { gs[Number(i.dataset.g)][i.dataset.k] = i.value === "" ? null : Number(i.value); });
+  await api("/api/goals", { goals: gs }); delete sig.goals; poll();
+};
+function renderLinkedin() {
+  const l = S.linkedin || {}, el = document.getElementById("li");
+  once("li", l, el, () => {
+    el.innerHTML = `<input type="url" id="liUrl" placeholder="LinkedIn şirket sayfası adresi" value="${esc(l.url || "")}">${l.url ? `<div class="small" style="margin:4px 0"><a class="link" href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">Sayfayı aç ↗</a></div>` : ""}
+      <div class="two" style="margin-top:6px"><label class="small mute">Takipçi<input type="number" id="liF" value="${l.followers ?? ""}"></label><label class="small mute">Gösterim (7 gün)<input type="number" id="liI" value="${l.impressions7d ?? ""}"></label><label class="small mute">Gönderi (7 gün)<input type="number" id="liP" value="${l.posts7d ?? ""}"></label></div>
+      <button id="liSave" style="margin-top:6px">Kaydet</button><div class="small mute" style="margin-top:4px">LinkedIn ücretsiz API vermediği için sayıları elle (ya da Metricool'dan) girin. Son güncelleme: ${l.updatedAt ? ts(new Date(l.updatedAt)) + " önce" : "—"}</div>`;
+    document.getElementById("liSave").onclick = async () => { await api("/api/linkedin", { url: document.getElementById("liUrl").value, followers: document.getElementById("liF").value, impressions7d: document.getElementById("liI").value, posts7d: document.getElementById("liP").value }); delete sig.li; poll(); };
+  });
+}
+let chatMsgs = [];
+function addChat(who, text) { chatMsgs.push({ who, text }); renderChat(); }
+function renderChat() {
+  const box = document.getElementById("chatlog"); if (!box) return;
+  box.innerHTML = chatMsgs.map((m) => `<div class="msg ${m.who}">${esc(m.text)}</div>`).join("") || `<div class="mute small">Merhaba __OWNER__, ben __ASSISTANT__. /yardim yazın.</div>`;
+  const lastM = chatMsgs[chatMsgs.length - 1];
+  if (lastM && lastM.who === "mars" && /\/onay yazın/.test(lastM.text)) box.insertAdjacentHTML("beforeend", `<button id="ok" style="align-self:flex-start">✔ Onayla</button>`);
+  const ok = document.getElementById("ok"); if (ok) ok.onclick = () => sendChat("/onay");
+  box.scrollTop = box.scrollHeight;
+}
+async function sendChat(text) {
+  if (!text.trim()) return;
+  addChat("me", text); document.getElementById("chatIn").value = "";
+  if (/^\/sor\b/i.test(text)) addChat("mars", "Düşünüyorum…");
+  const r = await api("/api/chat", { text });
+  if (/^\/sor\b/i.test(text)) chatMsgs.pop();
+  addChat("mars", r.reply || "(yanıt yok)"); poll();
+}
+document.getElementById("chatSend").onclick = () => sendChat(document.getElementById("chatIn").value);
+document.getElementById("chatIn").addEventListener("keydown", (e) => { if (e.key === "Enter") sendChat(e.target.value); });
+document.getElementById("todoAdd").onclick = async () => { const i = document.getElementById("todoIn"); if (!i.value.trim()) return; await api("/api/today", { op: "add", text: i.value }); i.value = ""; poll(); };
+document.getElementById("todoIn").addEventListener("keydown", (e) => { if (e.key === "Enter") document.getElementById("todoAdd").click(); });
+document.getElementById("todoClear").onclick = async () => { await api("/api/today", { op: "clearDone" }); poll(); };
+document.getElementById("chips").innerHTML = ["/durum", "/yardim", "/toplanti Mühendislik", "/sor Bu hafta neye odaklanmalıyız?"].map((c) => `<button data-c="${esc(c)}">${esc(c.length > 22 ? c.slice(0, 20) + "…" : c)}</button>`).join("");
+document.querySelectorAll("#chips button").forEach((b) => { b.onclick = () => { document.getElementById("chatIn").value = b.dataset.c; document.getElementById("chatIn").focus(); }; });
+fetch("/api/chat/log").then((r) => r.json()).then((l) => { chatMsgs = l.flatMap((m) => [{ who: "me", text: m.q }, { who: "mars", text: m.a }]); renderChat(); }).catch(() => {});
+let shelf = [];
+async function loadShelf() { shelf = await fetch("/api/shelf").then((r) => r.json()).catch(() => []); renderShelf(); }
+function renderShelf() {
+  const q = (document.getElementById("shelfQ").value || "").toLowerCase(), el = document.getElementById("shelf");
+  const list = shelf.filter((x) => !q || x.name.toLowerCase().includes(q) || x.slug.includes(q)).slice(0, 60);
+  el.innerHTML = list.map((x) => `<div class="li"><button data-sl="${esc(x.slug)}" title="Geri getir">↩</button> ${esc(x.emoji)} ${esc(x.name)} <span class="mute">${esc(x.division)}</span></div>`).join("") || `<div class="mute">Rafta ajan yok.</div>`;
+  el.querySelectorAll("[data-sl]").forEach((b) => { b.onclick = async () => { if (!confirm("Bu ajan geri getirilsin mi?")) return; const r = await api("/api/chat", { text: "/geri " + b.dataset.sl, confirm: true }); addChat("mars", r.reply || "Tamam"); setTimeout(() => { loadShelf(); poll(); }, 300); }; });
+}
+document.getElementById("shelfQ").addEventListener("input", renderShelf);
+function renderAll() {
+  const ct = document.getElementById("costToday"); if (ct) ct.textContent = "$" + (S.costToday || 0).toFixed(2);
+  renderMars(); renderNetBox(); renderHealth(); renderToday(); renderNews(); renderRadar(); renderGoals(); renderLinkedin();
+  const w = [...agents.values()].filter((a) => a.state === "working").length; document.title = (w ? `(${w}) ` : "") + "__COMPANY__ Ofisi";
+}
+
+// ---------- veri ----------
+async function poll() {
+  try { const r = await fetch("/api/state", { cache: "no-store" }); S = { ...(await r.json()), _view: null }; applyState(); } catch { /* sunucu yoksa sessizce yeniden dene */ }
+}
+loadImgs.then(() => { poll(); setInterval(poll, 2500); loadMeetings(); setInterval(loadMeetings, 20000); setInterval(() => { if (S._limit) renderLimit(); }, 30000); setInterval(() => { if (demo) applyState(); }, 20000); requestAnimationFrame(frame); });
+})();
+</script>
+</body>
+</html>

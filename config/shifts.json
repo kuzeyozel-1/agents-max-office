@@ -1,0 +1,11 @@
+{
+  "_not": "Vardiya planı: kim ne zaman mesaide. Sadece görüntüleme içindir (kimseyi başlatmaz); hangi terminalleri açacağınızı planlamak için. Saat yerel saattir. days: 1=Pzt … 7=Paz. who: bölüm adı, ajan adı veya dosya adı (slug).",
+  "shifts": [
+    { "name": "Gündüz vardiyası", "from": "09:00", "to": "18:00", "days": [1, 2, 3, 4, 5, 6],
+      "who": ["Mühendislik", "Pazarlama", "SEO & Blog", "Reklam", "Tasarım", "Satış", "Proje & Ürün", "Chief of Staff"] },
+    { "name": "Akşam vardiyası", "from": "18:00", "to": "24:00", "days": [1, 2, 3, 4, 5, 6, 7],
+      "who": ["Destek & İnsan", "Test", "Chief of Staff"] },
+    { "name": "Gece nöbeti", "from": "00:00", "to": "08:00", "days": [1, 2, 3, 4, 5, 6, 7],
+      "who": ["Güvenlik", "seo-google", "seo-technical", "Analytics Reporter"] }
+  ]
+}

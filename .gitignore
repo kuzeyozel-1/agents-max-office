@@ -1,0 +1,16 @@
+# Kişisel / iş verisi — asla paylaşılmaz
+data/
+handoff/
+meetings/
+gundem/
+visual/
+*.log
+.token
+.env*
+node_modules/
+.DS_Store
+config/office.json
+config/shifts.local.json
+*.pem
+*.key
+.claude/

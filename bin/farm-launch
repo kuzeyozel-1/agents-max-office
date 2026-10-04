@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Bir ajanı AYRI bir Terminal penceresinde etkileşimli Claude oturumu olarak açar (ofiste o ajan görünür olur).
+# Kullanım: bin/farm-launch "Chief of Staff" [proje-klasörü]
+set -euo pipefail
+AGENT="${1:?Ajan adı gerekli (ofiste ajana tıklayınca tam ad görünür)}"
+DIR="${2:-$HOME}"
+# Kabuk/AppleScript enjeksiyonuna karşı: ajan adı ve dizin yalnızca zararsız karakterler içerebilir.
+[[ "$AGENT" =~ ^[[:alnum:][:space:]\&._()-]+$ ]] || { echo "Geçersiz ajan adı" >&2; exit 2; }
+[[ "$DIR" != *"'"* && "$DIR" != *'"'* && "$DIR" != *\\* ]] || { echo "Geçersiz dizin" >&2; exit 2; }
+CMD="cd '$DIR' && claude --agent '$AGENT' -n '$AGENT'"
+osascript -e "tell application \"Terminal\" to do script \"$CMD\"" -e 'tell application "Terminal" to activate' >/dev/null
+echo "Terminal açıldı: $AGENT"

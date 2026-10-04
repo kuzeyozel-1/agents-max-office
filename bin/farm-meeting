@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Departman toplantısı: bir departmanın ajanları ajansı geliştirmek için toplanır, öneri üretir.
+# SALT OKUNUR çalışır (plan modu + yalnızca Read/Grep/Glob) ve harcama tavanı vardır. Çıktı: meetings/<tarih>-<departman>.md
+# Kullanım:  bin/farm-meeting "Mühendislik"            (bir departman)
+#            BUDGET=0.5 bin/farm-meeting "SEO & Blog"   (tavanı değiştir, varsayılan 1 USD)
+# DİKKAT: Her toplantı Claude kullanımı harcar (planınızdan / API'den). Önce tek departmanla deneyin.
+set -euo pipefail
+DEPT="${1:?Departman adı gerekli, örn: Mühendislik}"
+HERE="$(cd "$(dirname "$0")/.." && pwd)"
+BUDGET="${BUDGET:-1}"
+# Şirket/proje bilgisi config/office.json'dan gelir (yoksa office.example.json).
+eval "$(node --input-type=module -e '
+import { CFG } from "'"$HERE"'/lib/config.mjs";
+const q = (v) => "\x27" + String(v).replace(/\x27/g, "") + "\x27";
+console.log("CFG_COMPANY=" + q(CFG.company) + "; CFG_PROJECT=" + q(CFG.projectDir) + "; CFG_BRIEFS=" + q(CFG.briefFiles.join(", ")) + "; CFG_RED=" + q(CFG.redLines));
+')"
+PROJECT_DIR="${PROJECT_DIR:-$CFG_PROJECT}"
+SLUG="$(printf '%s' "$DEPT" | iconv -f UTF-8 -t ASCII//TRANSLIT 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-//; s/-$//')"
+[ -n "$SLUG" ] || SLUG="departman"
+OUT="$HERE/meetings/$(date +%F)-$SLUG.md"
+mkdir -p "$HERE/meetings"
+ROSTER="$(curl -s localhost:4747/api/state | node -e '
+let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const s=JSON.parse(d);const dept=process.argv[1];
+const m=s.roster.filter(r=>r.division.toLowerCase()===dept.toLowerCase());
+if(!m.length){console.error("Departman bulunamadı: "+dept+". Mevcut: "+[...new Set(s.roster.map(r=>r.division))].join(", "));process.exit(2)}
+console.log(m.map(r=>"- "+r.name+": "+r.description).join("\n"))})' "$DEPT")"
+PROMPT="Sen $CFG_COMPANY şirketinin \"$DEPT\" departman toplantısının başkanısın. Türkçe yaz.
+Üyeler (her biri kendi uzmanlığıyla konuşur):
+$ROSTER
+
+Bağlam: Önce $PROJECT_DIR altındaki şu dosyaları OKU (varsa): $CFG_BRIEFS. Varsayım üretme.
+KIRMIZI ÇİZGİLER: $CFG_RED Dosya DEĞİŞTİRME, komut ÇALIŞTIRMA; yalnızca öneri yaz.
+
+Toplantı çıktısı (Markdown, '# $DEPT toplantısı — $(date +%F)' başlığıyla başla):
+1. Durum: bu departmanın alanında ajansın şu an en zayıf 3 noktası (kanıtla, dosya/veri göster).
+2. Öneriler: ajansı geliştirecek en değerli 3 somut iş, her biri için: ne, neden, tahmini efor, nasıl ölçülür.
+3. Üyeler arası görüş ayrılığı varsa kısaca.
+4. Yöneticiden istenen kararlar (evet/hayır sorusu olarak).
+Kısa ve uygulanabilir yaz, en fazla 400 kelime."
+echo "Toplantı başlıyor: $DEPT (tavan: $BUDGET USD) → $OUT"
+cd "$PROJECT_DIR"
+claude -p "$PROMPT" -n "Toplantı: $DEPT" --permission-mode plan --allowedTools "Read,Grep,Glob" --max-budget-usd "$BUDGET" | tee "$OUT"
+echo; echo "Kaydedildi: $OUT"
