@@ -553,7 +553,7 @@ function renderAi() {
       .concat(a.providers.map((p) => `<div class="row"><span>${dot(p.state === "hazır")} <b>${esc(p.name)}</b> <span class="mute">${esc(p.model)} · ${p.local ? "yerel" : "ücretsiz"}</span></span><span class="mute">${esc(p.state)}${p.err ? " · " + esc(p.err) : ""}</span></div>`));
     el.innerHTML = rows.join("") + (a.providers.length ? "" : `<div class="mute">Sağlayıcı tanımlı değil (config/office.json → providers).</div>`) +
       `<div style="margin:8px 0 4px">Mod: ${["oto", "claude", "ucretsiz"].map((m) => `<button data-ai="${m}" ${a.mode === m ? "disabled" : ""}>${m}</button>`).join(" ")}</div>` +
-      `<div class="mute">oto: Claude, limit/hata/internet yoksa ücretsiz sağlayıcı. Uzak sağlayıcıya yalnızca herkese açık gündem gider. Bekleyen soru: ${a.queued}</div>`;
+      `<div class="mute" style="margin-bottom:4px">Claude kullanımı (elle girilir): ${a.usage && (a.usage.hafta != null || a.usage.oturum != null) ? `hafta ${a.usage.hafta ?? "?"}% · oturum ${a.usage.oturum ?? "?"}%` : "girilmedi — sohbete <code>/kullanim hafta 47</code> yazın"}. Ofis bunu kendisi okuyamaz; yalnızca limit DOLUNCA fark eder.</div><div class="mute">oto: Claude, limit/hata/internet yoksa ücretsiz sağlayıcı. Uzak sağlayıcıya yalnızca herkese açık gündem gider. Bekleyen soru: ${a.queued}</div>`;
     el.querySelectorAll("button[data-ai]").forEach((b) => { b.onclick = async () => { await api("/api/chat", { text: "/ai " + b.dataset.ai, confirm: true }); poll(); }; });
   });
 }
