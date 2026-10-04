@@ -14,3 +14,4 @@ config/shifts.local.json
 *.pem
 *.key
 .claude/
+config/keys.env

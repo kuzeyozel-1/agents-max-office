@@ -83,6 +83,7 @@
     <section data-tab="gundem">
       <div class="card"><h2>Gündem (Türkiye · yurt dışı · yazılım · pazarlama)</h2><div class="chips" id="newsCats"></div><div id="news" class="small news" style="margin-top:6px"></div><div id="newsMeta" class="small mute" style="margin-top:6px"></div></div>
       <div class="card"><h2>Günlük pazar radarı (__ASSISTANT__)</h2><div id="radar" class="small"></div></div>
+      <div class="card"><h2>Yapay zekâ yolları</h2><div id="aiBox" class="small"></div></div>
     </section>
     <section data-tab="hedef">
       <div class="card"><h2>Hedefler</h2><div id="goals"></div><button id="goalsSave" style="margin-top:6px">Kaydet</button></div>
@@ -535,6 +536,18 @@ function renderRadar() {
     document.getElementById("rdRun").onclick = async () => { await api("/api/radar/run"); poll(); setTimeout(loadRadar, 90000); };
   });
 }
+function renderAi() {
+  const a = S.ai || { mode: "oto", providers: [], queued: 0 }, el = document.getElementById("aiBox"), lim = S.limit;
+  once("ai", [a, Boolean(lim), S.net && S.net.online], el, () => {
+    const dot = (ok) => `<span style="color:${ok ? "#7bc96f" : "#e06c5b"}">●</span>`;
+    const rows = [`<div class="row"><span>${dot(!lim && (!S.net || S.net.online !== false))} <b>Claude</b></span><span class="mute">${lim ? "limit dolu" : S.net && S.net.online === false ? "internet yok" : "hazır"}</span></div>`]
+      .concat(a.providers.map((p) => `<div class="row"><span>${dot(p.state === "hazır")} <b>${esc(p.name)}</b> <span class="mute">${esc(p.model)} · ${p.local ? "yerel" : "ücretsiz"}</span></span><span class="mute">${esc(p.state)}${p.err ? " · " + esc(p.err) : ""}</span></div>`));
+    el.innerHTML = rows.join("") + (a.providers.length ? "" : `<div class="mute">Sağlayıcı tanımlı değil (config/office.json → providers).</div>`) +
+      `<div style="margin:8px 0 4px">Mod: ${["oto", "claude", "ucretsiz"].map((m) => `<button data-ai="${m}" ${a.mode === m ? "disabled" : ""}>${m}</button>`).join(" ")}</div>` +
+      `<div class="mute">oto: Claude, limit/hata/internet yoksa ücretsiz sağlayıcı. Uzak sağlayıcıya yalnızca herkese açık gündem gider. Bekleyen soru: ${a.queued}</div>`;
+    el.querySelectorAll("button[data-ai]").forEach((b) => { b.onclick = async () => { await api("/api/chat", { text: "/ai " + b.dataset.ai, confirm: true }); poll(); }; });
+  });
+}
 function renderGoals() {
   const gs = S.goals || [], el = document.getElementById("goals");
   once("goals", gs, el, () => {
@@ -592,7 +605,7 @@ function renderShelf() {
 document.getElementById("shelfQ").addEventListener("input", renderShelf);
 function renderAll() {
   const ct = document.getElementById("costToday"); if (ct) ct.textContent = "$" + (S.costToday || 0).toFixed(2);
-  renderMars(); renderNetBox(); renderHealth(); renderToday(); renderNews(); renderRadar(); renderGoals(); renderLinkedin();
+  renderMars(); renderNetBox(); renderHealth(); renderToday(); renderNews(); renderRadar(); renderAi(); renderGoals(); renderLinkedin();
   const w = [...agents.values()].filter((a) => a.state === "working").length; document.title = (w ? `(${w}) ` : "") + "__COMPANY__ Ofisi";
 }
 

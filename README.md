@@ -9,6 +9,8 @@
 - **Ofis görünümü:** `~/.claude/agents` altındaki ajanları departmanlara dizer; `~/.claude/projects` altındaki oturum kayıtlarından kimin çalıştığını/beklediğini gösterir.
 - **Vardiya planı** (`config/shifts.json`), **bugün listesi**, **hedefler**, **gündem akışı** (RSS, `config/sources.json`), **site sağlık kontrolleri**.
 - **Limit / internet farkındalığı:** Claude limit mesajı görülürse ya da internet 3 denemede gelmezse ofis "uyku moduna" geçer ve başka bir yapay zekâya yapıştırılabilecek bir **devir notu** (`handoff/LATEST.md`) yazar. *Limit algılama gerçek mesaj biçimlerine göre yazıldı ama canlı bir limit olayında henüz denenmedi.*
+- **Ücretsiz/yerel yapay zekâ yedeği** (`lib/providers.mjs`): Claude limiti dolunca, hata verince ya da internet yokken (yerel modelle) sohbet ve günlük radar bu sağlayıcılara düşer. Groq, Gemini, OpenRouter ve yerel Ollama için örnek ayar hazır; OpenAI uyumlu her uç eklenebilir.
+- **İnternet kesilince:** 3 denemede (≈30 sn) bağlantı gelmezse ofis uyur, gelen sorular kuyruğa alınır, bağlantı gelince yanıtlanıp sohbete düşer. 5 dakikadan uzun kesintide ve Claude limiti dolduğunda **devir notu + (ayarlıysa) Claude hafıza dosyası** otomatik yazılır.
 - **Departman toplantısı** (`bin/farm-meeting`): salt-okunur (plan modu), harcama tavanlı.
 
 ## Kurulum
@@ -19,8 +21,18 @@ node server.mjs                                     # http://localhost:4747
 # Mac'te açılışta otomatik başlatmak için: launchd/install-launchd.sh
 ```
 
+## Ücretsiz yapay zekâ sağlayıcıları
+```bash
+cp config/keys.env.example config/keys.env && chmod 600 config/keys.env   # anahtarları KENDİNİZ alıp yazın
+node bin/farm-providers.mjs models Groq     # model kimliklerini doğrulayın (config/office.json → providers[].model)
+node bin/farm-providers.mjs test            # her sağlayıcıya kısa deneme isteği
+```
+Sohbet kutusunda `/ai` durumu gösterir, `/ai oto|claude|ucretsiz` modu değiştirir. Ücretsiz katmanların limitleri ve veri politikaları sağlayıcıdan sağlayıcıya değişir ve değişebilir; kullanmadan önce kendi sayfalarından kontrol edin.
+
+**Gizlilik kuralı:** Uzak (ücretsiz) sağlayıcıya yalnızca *herkese açık* içerik gider (gündem başlıkları ve sorunuzun kendisi). Bugün listesi, hedefler, LinkedIn sayıları, hafıza/devir notu gibi iç bağlam yalnızca Claude'a ve bu bilgisayardaki yerel modele gider. Bu yüzden `/sor` sorusuna müşteri verisi yazmayın: soru metni ücretsiz sağlayıcıya gidebilir. Yanıtın altında hangi sağlayıcıdan geldiği yazar.
+
 ## Maliyet uyarısı
-Panel kendi başına ücretsizdir. **Yalnızca** sohbet kutusunda `/sor`, günlük pazar radarı ve departman toplantıları Claude'u çağırır; her çağrı en az yaklaşık 0,12–0,15 USD tutar (ölçüldü) ve harcama tavanlıdır. Radar varsayılan olarak kapalıdır.
+Panel kendi başına ücretsizdir. **Yalnızca** sohbet kutusunda `/sor`, günlük pazar radarı ve departman toplantıları Claude'u çağırır (radar, ücretsiz sağlayıcı varsa önce onu dener); her çağrı en az yaklaşık 0,12–0,15 USD tutar (ölçüldü) ve harcama tavanlıdır. Radar varsayılan olarak kapalıdır.
 
 ## Güvenlik modeli (kısa)
 Ayrıntı: [SECURITY.md](SECURITY.md).
@@ -31,7 +43,7 @@ Ayrıntı: [SECURITY.md](SECURITY.md).
 - Panel `~/.claude` altını **okur** (oturum başlıkları, dosya yolları). Ekran görüntüsü paylaşırken bunu unutmayın.
 
 ## Yapılandırma
-`config/office.json` (hepsi isteğe bağlı): `company`, `owner`, `assistant`, `projectDir`, `memoryFile`, `briefFiles`, `redLines`, `siteUrl`, `probes`. Bkz. `config/office.example.json`.
+`config/office.json` (hepsi isteğe bağlı): `providers`, `memoryDir`, `company`, `owner`, `assistant`, `projectDir`, `memoryFile`, `briefFiles`, `redLines`, `siteUrl`, `probes`. Bkz. `config/office.example.json`.
 
 ## Görseller
 `public/assets/` altındaki görseller **yapay zekâ ile üretilmiştir** (ChatGPT görsel üretimi) ve bu projenin MIT lisansı altında paylaşılır; kaynak bildirimi (C2PA) üst verisi temizlenmiştir.

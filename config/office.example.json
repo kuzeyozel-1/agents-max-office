@@ -5,8 +5,49 @@
   "assistant": "Asistan",
   "projectDir": "~/dev/proje",
   "memoryFile": "",
-  "briefFiles": ["CLAUDE.md"],
+  "briefFiles": [
+    "CLAUDE.md"
+  ],
   "redLines": "Abartılı vaat yok; her iddianın ölçümü olsun.",
   "siteUrl": "",
-  "probes": [{ "name": "Anasayfa", "path": "/" }, { "name": "Sitemap", "path": "/sitemap.xml" }]
+  "probes": [
+    {
+      "name": "Anasayfa",
+      "path": "/"
+    },
+    {
+      "name": "Sitemap",
+      "path": "/sitemap.xml"
+    }
+  ],
+  "memoryDir": "",
+  "providers": [
+    {
+      "name": "Groq",
+      "baseUrl": "https://api.groq.com/openai/v1",
+      "model": "llama-3.3-70b-versatile",
+      "keyEnv": "GROQ_API_KEY"
+    },
+    {
+      "name": "Gemini",
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "model": "gemini-2.5-flash",
+      "keyEnv": "GEMINI_API_KEY"
+    },
+    {
+      "name": "OpenRouter",
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "model": "MODEL_ID_BURAYA:free",
+      "keyEnv": "OPENROUTER_API_KEY",
+      "enabled": false
+    },
+    {
+      "name": "Ollama",
+      "baseUrl": "http://127.0.0.1:11434/v1",
+      "model": "llama3.2",
+      "keyEnv": "",
+      "enabled": false
+    }
+  ],
+  "_providers_not": "Sırayla denenir. Anahtarlar config/keys.env'de (git'e girmez). Model kimliklerini `node bin/farm-providers.mjs models <ad>` ile doğrulayın. Ollama internet yokken de çalışır."
 }

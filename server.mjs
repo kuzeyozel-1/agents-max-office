@@ -241,6 +241,31 @@ function writeHandoff(reason, state) {
   return { file, latest: path.join(HANDOFF_DIR, "LATEST.md"), at: now.toISOString() };
 }
 let lastLimitKey = null, lastHandoff = null;
+// Devir notu + (ayarlıysa) Claude hafıza dizinine tek bir "devir" hafıza dosyası. Aynı sebep 10 dk içinde tekrar yazılmaz.
+const noteAt = new Map();
+function writeNote(reason) {
+  const k = reason.slice(0, 20), now = Date.now();
+  if (now - (noteAt.get(k) || 0) < 600_000) return; noteAt.set(k, now);
+  try { lastHandoff = writeHandoff(reason, lastState); } catch (e) { console.error("devir notu yazılamadı:", e.message); }
+  try { writeMemory(reason, lastState); } catch (e) { console.error("hafıza yazılamadı:", e.message); }
+}
+function writeMemory(reason, st) {
+  if (!CFG.memoryDir) return;
+  fs.mkdirSync(CFG.memoryDir, { recursive: true });
+  const open = (st.today || []).filter((i) => !i.done).slice(0, 10).map((i) => `- ${i.text}`);
+  const terms = (st.sessions || []).filter((s) => s.state !== "sleeping").slice(0, 8).map((s) => `- ${s.title} (${s.project}) · ${s.state}`);
+  const body = ["---", "name: agent-farm-devir", "description: Ofis panelinin otomatik yazdığı son devir notu (limit/internet kesintisi)", "metadata:", "  type: project", "---", "",
+    `Son olay: **${reason}** — ${new Date().toLocaleString("tr-TR")}`,
+    st.limit ? `Claude limiti: ${st.limit.text || "doldu"}${st.limit.resetsAt ? ` (sıfırlanma ${new Date(st.limit.resetsAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })})` : ""}` : "Claude limiti: algılanmadı",
+    `İnternet: ${st.net?.online === false ? "KOPUK" : "var"}`, "",
+    "**Bugün listesinde açık işler:**", ...(open.length ? open : ["- (yok)"]), "",
+    "**Açık terminaller:**", ...(terms.length ? terms : ["- (yok)"]), "",
+    `**How to apply:** yeni oturumda önce \`${path.join(HANDOFF_DIR, "LATEST.md")}\` dosyasını oku, kaldığın yerden devam et. Bu dosya otomatik üzerine yazılır; kalıcı bilgiyi buraya koyma.`, ""].join("\n");
+  fs.writeFileSync(path.join(CFG.memoryDir, "project_agent_farm_devir.md"), body);
+  const idx = path.join(CFG.memoryDir, "MEMORY.md"), line = "- [Ofis devir notu (otomatik)](project_agent_farm_devir.md) — limit/internet kesintisinde ofis panelinin yazdığı son durum";
+  let cur = ""; try { cur = fs.readFileSync(idx, "utf8"); } catch { /* yok */ }
+  if (!cur.includes("project_agent_farm_devir.md")) fs.appendFileSync(idx, (cur && !cur.endsWith("\n") ? "\n" : "") + line + "\n");
+}
 
 let rosterCache = { at: 0, data: [] };
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png" };
@@ -269,7 +294,7 @@ const farmCtx = {
   roster: () => { if (Date.now() - rosterCache.at > 60_000) rosterCache = { at: Date.now(), data: loadRoster() }; return rosterCache.data; },
   state: () => lastState, meetFiles, shelfList, invalidate: () => { rosterCache.at = 0; },
 };
-extra.init({ limitActive: () => Boolean(lastState.limit) });
+extra.init({ limitActive: () => Boolean(lastState.limit), state: () => lastState, meetFiles, writeNote });
 
 http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
@@ -287,7 +312,7 @@ http.createServer(async (req, res) => {
     try { st.shelved = fs.readdirSync(path.join(HOME, ".claude", "agents-raf")).filter((f) => f.endsWith(".md") && !/readme/i.test(f)).length; } catch { st.shelved = 0; }
     st.limit = detectLimit(st.sessions);
     // Limit YENİ görüldüyse devir notunu bir kez otomatik yaz
-    if (st.limit && st.limit.key !== lastLimitKey) { lastLimitKey = st.limit.key; try { lastHandoff = writeHandoff("otomatik: Claude limiti algılandı", st); } catch (e) { console.error("devir notu yazılamadı", e.message); } }
+    if (st.limit && st.limit.key !== lastLimitKey) { lastLimitKey = st.limit.key; try { writeNote("Claude limiti algılandı"); } catch (e) { console.error("devir notu yazılamadı", e.message); } }
     if (!st.limit) lastLimitKey = null;
     st.handoff = lastHandoff;
     lastState = st;
