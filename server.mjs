@@ -24,7 +24,9 @@ const HANDOFF_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "han
 const MEMORY_PENDING = CFG.memoryFile;
 // Gerçek kayıtlardan: "You've hit your session limit · resets 9:10am (Europe/Istanbul)", "Usage limit reached · continuing automatically at 8:40pm", HTTP 429 rate_limit
 const LIMIT_RE = /(hit your [a-z ]{0,30}limit|usage limit reached|limit reached|error type rate_limit|HTTP 429)/i;
-const SHIFTS_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), "config", "shifts.json");
+// config/shifts.local.json (git'e girmez) varsa varsayılan plan yerine o kullanılır.
+const CONFIG_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "config");
+const SHIFTS_FILE = fs.existsSync(path.join(CONFIG_DIR, "shifts.local.json")) ? path.join(CONFIG_DIR, "shifts.local.json") : path.join(CONFIG_DIR, "shifts.json");
 const WORKING_MS = 45_000; // son kayıt bu kadar yeniyse "çalışıyor"
 const RECENT_MS = 30 * 60_000; // bu kadar yeniyse "yeni bitti / bekliyor"
 const SCAN_WINDOW_MS = 24 * 3600_000; // bundan eski oturumlara hiç bakılmaz
