@@ -33,6 +33,9 @@
   #limitBox { display:none; background:#2a1030; border:2px solid var(--meet); color:#e5c9ff; padding:8px 10px; border-radius:6px; }
   pre { white-space:pre-wrap; background:#14100c; padding:6px; border-radius:4px; max-height:240px; overflow:auto; font-size:11px; }
   .link { color:var(--accent); cursor:pointer; text-decoration:underline; }
+  details.card>summary{cursor:pointer;font-weight:700;list-style:none;text-transform:uppercase;letter-spacing:.08em;font-size:13px}
+  details.card>summary::before{content:"▸ "}details.card[open]>summary::before{content:"▾ "}
+  details.card[open]>summary{margin-bottom:8px}
   #tabs { display:flex; gap:4px; flex-wrap:wrap; }
   #tabs button { flex:1; padding:5px 4px; font-size:12px; }
   aside section { display:none; flex-direction:column; gap:8px; }
@@ -76,21 +79,21 @@
     <div id="limitBox" class="small"></div>
     <div id="netBox" class="small"></div>
     <div class="card" id="mars"></div>
-    <div id="tabs"><button data-tab="ofis" class="on">Ofis</button><button data-tab="bugun">Bugün</button><button data-tab="gundem">Gündem</button><button data-tab="hedef">Hedefler</button><button data-tab="sohbet">Sohbet</button><button data-tab="ajan">Ajan</button></div>
-    <section data-tab="ofis" style="display:flex">
+    <div id="tabs"><button data-tab="bugun" class="on">Bugün</button><button data-tab="sohbet">Sohbet</button><button data-tab="gundem">Gündem</button><button data-tab="ofis">Ofis</button></div>
+    <section data-tab="ofis">
       <div class="card"><h2>Ofis durumu</h2><div class="stats" id="stats"></div></div>
-      <div class="card"><h2>Site sağlığı</h2><div id="health" class="small"></div></div>
-      <div class="card"><h2>Odalar (departmanlar)</h2><div class="rooms" id="rooms"></div></div>
-      <div class="card"><h2>Terminaller (sunucu odası)</h2><div id="sessions" class="small"></div></div>
-      <div class="card"><h2>Şu an ne yapıyorlar</h2><div id="doing" class="small"></div></div>
-      <div class="card"><h2>Olay akışı</h2><div id="log" class="small"></div></div>
+      <details class="card"><summary>Odalar (departmanlar)</summary><div class="rooms" id="rooms"></div></details>
+      <details class="card"><summary>Terminaller (sunucu odası)</summary><div id="sessions" class="small"></div></details>
+      <details class="card"><summary>Şu an ne yapıyorlar</summary><div id="doing" class="small"></div></details>
+      <details class="card"><summary>Olay akışı</summary><div id="log" class="small"></div></details>
     </section>
-    <section data-tab="bugun">
-      <div class="card"><h2>Kopyalanabilir metinler</h2><div id="prompts" class="small"></div></div>
-      <div class="card"><h2>Ajanların bugünkü işleri</h2><div id="wd" class="small"></div><div id="wdOut"></div></div>
+    <section data-tab="bugun" style="display:flex">
       <div class="card"><h2>Bugün yapacaklarım</h2><div id="todo"></div><div class="two" style="grid-template-columns:1fr auto;margin-top:6px"><input type="text" id="todoIn" placeholder="Yeni iş ekle…"><button id="todoAdd">Ekle</button></div><div style="margin-top:6px"><button id="todoClear" class="small">Tamamlananları temizle</button></div></div>
-      <div class="card"><h2>Öneriler (otomatik)</h2><div id="sugg" class="small"></div></div>
-      <div class="card"><h2>Departman toplantıları</h2><div id="meet" class="small"></div></div>
+      <div class="card"><h2>Ajanların bugünkü işleri</h2><div id="wd" class="small"></div><div id="wdOut"></div></div>
+      <details class="card" open><summary>Site sağlığı</summary><div id="health" class="small"></div></details>
+      <details class="card"><summary>Kopyalanabilir metinler</summary><div id="prompts" class="small"></div></details>
+      <details class="card"><summary>Öneriler (otomatik)</summary><div id="sugg" class="small"></div></details>
+      <details class="card"><summary>Departman toplantıları</summary><div id="meet" class="small"></div></details>
     </section>
     <section data-tab="gundem">
       <div class="card"><h2>Gündem (Türkiye · yurt dışı · yazılım · pazarlama)</h2><div class="chips" id="newsCats"></div><div id="news" class="small news" style="margin-top:6px"></div><div id="newsMeta" class="small mute" style="margin-top:6px"></div></div>
@@ -472,7 +475,7 @@ async function api(path, body) {
   let r = await go(); if (r.status === 403) { await getToken(); r = await go(); }
   return r.json().catch(() => ({}));
 }
-let tab = "ofis";
+let tab = "bugun";
 function setTab(n) {
   tab = n;
   document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === n));
@@ -571,7 +574,7 @@ let menuArm = "";
 function renderMenu() {
   const el = document.getElementById("menuPanel"); if (!el) return;
   const links = S.links || [], groups = [...new Set(links.map((l) => l.group))];
-  const tabs = [["ofis", "Ofis"], ["bugun", "Bugün"], ["gundem", "Gündem"], ["hedef", "Hedefler"], ["sohbet", "Sohbet"], ["ajan", "Ajan"]];
+  const tabs = [["bugun", "Bugün"], ["sohbet", "Sohbet"], ["gundem", "Gündem"], ["ofis", "Ofis"], ["hedef", "Hedefler"], ["ajan", "Ajan (çalışan detayı)"]];
   el.innerHTML = `<button class="mi x" id="menuX" style="width:auto">✕</button><h4>Sekmeler</h4>` + tabs.map(([k, l]) => `<button class="mi" data-tab-go="${k}">${l}</button>`).join("") +
     `<h4>Kopyala</h4>` + (promptItems.length ? promptItems.map((p) => `<button class="mi" data-cp="${esc(p.id)}">📋 ${esc(p.title.length > 44 ? p.title.slice(0, 42) + "…" : p.title)}</button>`).join("") : `<div class="mute small" style="padding:4px 8px">Metin yok</div>`) +
     ACTIONS.map(([g, items]) => `<h4>${g}</h4>` + items.map(([l, cmd]) => `<button class="mi" data-act="${esc(cmd)}">${esc(l)}</button>`).join("")).join("") +
