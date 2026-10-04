@@ -296,7 +296,7 @@ const farmCtx = {
   roster: () => { if (Date.now() - rosterCache.at > 60_000) rosterCache = { at: Date.now(), data: loadRoster() }; return rosterCache.data; },
   state: () => lastState, meetFiles, shelfList, invalidate: () => { rosterCache.at = 0; },
 };
-extra.init({ limitActive: () => Boolean(lastState.limit), state: () => lastState, meetFiles, writeNote });
+extra.init({ limitActive: () => Boolean(lastState.limit), state: () => lastState, meetFiles, writeNote, roster: () => farmCtx.roster() });
 
 http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
@@ -319,6 +319,7 @@ http.createServer(async (req, res) => {
     st.handoff = lastHandoff;
     lastState = st;
     Object.assign(st, extra.stateFragment(st, meetFiles));
+    st.subagents = [...(st.subagents || []), ...extra.virtualSubs()];
     // oturum gövdelerini küçült (devir notu için gerekenler API'de gereksiz)
     st.sessions = st.sessions.map(({ lastAssistant, ...r }) => r);
     const body = JSON.stringify(st);

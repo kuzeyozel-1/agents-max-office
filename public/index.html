@@ -76,6 +76,7 @@
       <div class="card"><h2>Olay akışı</h2><div id="log" class="small"></div></div>
     </section>
     <section data-tab="bugun">
+      <div class="card"><h2>Ajanların bugünkü işleri</h2><div id="wd" class="small"></div><div id="wdOut"></div></div>
       <div class="card"><h2>Bugün yapacaklarım</h2><div id="todo"></div><div class="two" style="grid-template-columns:1fr auto;margin-top:6px"><input type="text" id="todoIn" placeholder="Yeni iş ekle…"><button id="todoAdd">Ekle</button></div><div style="margin-top:6px"><button id="todoClear" class="small">Tamamlananları temizle</button></div></div>
       <div class="card"><h2>Öneriler (otomatik)</h2><div id="sugg" class="small"></div></div>
       <div class="card"><h2>Departman toplantıları</h2><div id="meet" class="small"></div></div>
@@ -548,6 +549,20 @@ function renderAi() {
     el.querySelectorAll("button[data-ai]").forEach((b) => { b.onclick = async () => { await api("/api/chat", { text: "/ai " + b.dataset.ai, confirm: true }); poll(); }; });
   });
 }
+let wdOpen = "", wdText = "";
+function renderWorkday() {
+  const w = S.workday || { tasks: [] }, el = document.getElementById("wd"), out = document.getElementById("wdOut");
+  once("wd", [w, wdOpen, wdText], el, () => {
+    const ico = { working: "⚙️", done: "✅", planned: "·", failed: "⚠️" }, tr = { working: "çalışıyor…", done: "bitti", planned: "sırada", failed: "başarısız" };
+    const done = w.tasks.filter((t) => t.status === "done").length;
+    el.innerHTML = `<div class="mute" style="margin-bottom:6px">${done}/${w.tasks.length} görev bitti · ücretsiz yapay zekâ sağlayıcıları rol olarak yapar, çıktı TASLAKTIR: hiçbir yere gönderilmez/yayınlanmaz.</div>` +
+      w.tasks.map((t) => { const a = agents.get(t.slug); return `<div class="li" style="cursor:${t.status === "done" ? "pointer" : "default"}" data-wd="${esc(t.id)}">${ico[t.status] || "·"} <b>${esc(a ? a.r.name : t.slug)}</b> — ${esc(t.title)} <span class="mute">${tr[t.status] || ""}${t.via ? " · " + esc(t.via) : ""}${t.error ? " · " + esc(t.error) : ""}</span></div>`; }).join("") +
+      `<div style="margin-top:6px"><button id="wdRe">Planı yeniden başlat</button></div>`;
+    el.querySelectorAll("[data-wd]").forEach((n) => { n.onclick = async () => { const t = w.tasks.find((x) => x.id === n.dataset.wd); if (!t || t.status !== "done") return; wdOpen = t.id; wdText = (await fetch("/api/workday/output?id=" + encodeURIComponent(t.id)).then((r) => r.json()).catch(() => ({ text: "" }))).text; renderWorkday(); }; });
+    document.getElementById("wdRe").onclick = async () => { wdOpen = ""; wdText = ""; await api("/api/workday/restart", {}); poll(); };
+  });
+  out.innerHTML = wdOpen && wdText ? `<pre style="white-space:pre-wrap;max-height:340px;overflow:auto">${esc(wdText)}</pre>` : "";
+}
 function renderGoals() {
   const gs = S.goals || [], el = document.getElementById("goals");
   once("goals", gs, el, () => {
@@ -605,7 +620,7 @@ function renderShelf() {
 document.getElementById("shelfQ").addEventListener("input", renderShelf);
 function renderAll() {
   const ct = document.getElementById("costToday"); if (ct) ct.textContent = "$" + (S.costToday || 0).toFixed(2);
-  renderMars(); renderNetBox(); renderHealth(); renderToday(); renderNews(); renderRadar(); renderAi(); renderGoals(); renderLinkedin();
+  renderMars(); renderNetBox(); renderHealth(); renderToday(); renderNews(); renderRadar(); renderAi(); renderWorkday(); renderGoals(); renderLinkedin();
   const w = [...agents.values()].filter((a) => a.state === "working").length; document.title = (w ? `(${w}) ` : "") + "__COMPANY__ Ofisi";
 }
 

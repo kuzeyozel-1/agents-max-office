@@ -31,7 +31,8 @@ $ROSTER
 Bağlam: Önce $PROJECT_DIR altındaki şu dosyaları OKU (varsa): $CFG_BRIEFS. Varsayım üretme.
 KIRMIZI ÇİZGİLER: $CFG_RED Dosya DEĞİŞTİRME, komut ÇALIŞTIRMA; yalnızca öneri yaz.
 
-Toplantı çıktısı (Markdown, '# $DEPT toplantısı — $(date +%F)' başlığıyla başla):
+${FOCUS:+Bu toplantının ODAĞI: $FOCUS
+}Toplantı çıktısı (Markdown, '# $DEPT toplantısı — $(date +%F)' başlığıyla başla):
 1. Durum: bu departmanın alanında ajansın şu an en zayıf 3 noktası (kanıtla, dosya/veri göster).
 2. Öneriler: ajansı geliştirecek en değerli 3 somut iş, her biri için: ne, neden, tahmini efor, nasıl ölçülür.
 3. Üyeler arası görüş ayrılığı varsa kısaca.
