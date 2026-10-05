@@ -16,3 +16,6 @@ config/shifts.local.json
 .claude/
 config/keys.env
 config/workday.local.json
+
+# Yerel test ve geri dönüş yedekleri
+work/

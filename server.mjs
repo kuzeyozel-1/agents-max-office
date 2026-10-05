@@ -3,6 +3,7 @@
 // Çalıştırma: node server.mjs  →  http://localhost:4747
 import http from "node:http";
 import fs from "node:fs";
+import { atomicWrite } from "./lib/storage.mjs";
 import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
@@ -224,7 +225,11 @@ function writeHandoff(reason, state) {
     `Sonra aşağıdaki "Açık işler"den kaldığı yerden devam et. Üretimi etkileyen adımlarda (deploy, DNS, GTM yayınlama, e-posta gönderimi) yapmadan önce kullanıcıya sor.`,
     "```",
     ``,
-    `## Açık işler (Claude hafızasından)`,
+    `## Ofis görevlerinin güncel kaydı`,
+    `Kaynak: data/workday.json. Görevler ve çıktı dosyaları disktedir; aşağıdaki eski hafıza ile çelişirse güncel görev kaydını incele.`,
+    ...(state.workday?.tasks || []).map(t => `- ${t.title}: ${t.status}${t.error ? " · " + t.error : ""}`),
+    ``,
+    `## Önceki Claude hafızası (tarihî olabilir)`,
     pending.trim() || "_hafıza dosyası okunamadı_",
     ``,
     `## Terminaller (son durum)`,
@@ -238,8 +243,8 @@ function writeHandoff(reason, state) {
     ``,
   ].filter((x) => x !== undefined).join("\n");
   const file = path.join(HANDOFF_DIR, `HANDOFF-${stamp}.md`);
-  fs.writeFileSync(file, md);
-  fs.writeFileSync(path.join(HANDOFF_DIR, "LATEST.md"), md);
+  atomicWrite(file, md);
+  atomicWrite(path.join(HANDOFF_DIR, "LATEST.md"), md);
   return { file, latest: path.join(HANDOFF_DIR, "LATEST.md"), at: now.toISOString() };
 }
 let lastLimitKey = null, lastHandoff = null;
@@ -298,6 +303,24 @@ const farmCtx = {
 };
 extra.init({ limitActive: () => Boolean(lastState.limit), state: () => lastState, meetFiles, writeNote, roster: () => farmCtx.roster() });
 
+function refreshState() {
+  const roster = farmCtx.roster();
+  const st = { now: Date.now(), roster, ...dutyNow(roster), ...scan(roster) };
+  try { st.shelved = fs.readdirSync(path.join(HOME, ".claude", "agents-raf")).filter(f => f.endsWith(".md") && !/readme/i.test(f)).length; } catch { st.shelved = 0; }
+  st.limit = detectLimit(st.sessions);
+  Object.assign(st, extra.stateFragment(st, meetFiles));
+  st.subagents = [...(st.subagents || []), ...extra.virtualSubs()];
+  lastState = st;
+  if (st.limit && st.limit.key !== lastLimitKey) { lastLimitKey = st.limit.key; writeNote("Claude limiti algılandı"); }
+  if (!st.limit) lastLimitKey = null;
+  st.handoff = lastHandoff;
+  atomicWrite(path.join(HANDOFF_DIR, "STATE.json"), JSON.stringify({ at: st.now, net: st.net, limit: st.limit, today: st.today, workday: st.workday, ai: st.ai }, null, 2));
+  return st;
+}
+// Tarayıcı kapalıyken de izleme ve kalıcı durum kaydı sürer.
+setInterval(() => { try { refreshState(); } catch (e) { console.error("Durum kaydı başarısız:", e.message); } }, 10_000);
+setInterval(() => writeNote("Periyodik devamlılık kaydı"), 60_000);
+
 http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
   // Güvenlik başlıkları: çerçeveleme, MIME sezgisi ve dış kaynak yükleme kapalı.
@@ -309,19 +332,8 @@ http.createServer(async (req, res) => {
   if (extra.gate(req, res, url)) return;
   if (await extra.handle(req, res, url, farmCtx)) return;
   if (url.pathname === "/api/state") {
-    if (Date.now() - rosterCache.at > 60_000) rosterCache = { at: Date.now(), data: loadRoster() };
-    const st = { now: Date.now(), roster: rosterCache.data, ...dutyNow(rosterCache.data), ...scan(rosterCache.data) };
-    try { st.shelved = fs.readdirSync(path.join(HOME, ".claude", "agents-raf")).filter((f) => f.endsWith(".md") && !/readme/i.test(f)).length; } catch { st.shelved = 0; }
-    st.limit = detectLimit(st.sessions);
-    // Limit YENİ görüldüyse devir notunu bir kez otomatik yaz
-    if (st.limit && st.limit.key !== lastLimitKey) { lastLimitKey = st.limit.key; try { writeNote("Claude limiti algılandı"); } catch (e) { console.error("devir notu yazılamadı", e.message); } }
-    if (!st.limit) lastLimitKey = null;
-    st.handoff = lastHandoff;
-    lastState = st;
-    Object.assign(st, extra.stateFragment(st, meetFiles));
-    st.subagents = [...(st.subagents || []), ...extra.virtualSubs()];
-    // oturum gövdelerini küçült (devir notu için gerekenler API'de gereksiz)
-    st.sessions = st.sessions.map(({ lastAssistant, ...r }) => r);
+    const snapshot = refreshState();
+    const st = { ...snapshot, sessions: snapshot.sessions.map(({ lastAssistant, ...r }) => r) };
     const body = JSON.stringify(st);
     res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
     return res.end(body);

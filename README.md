@@ -10,7 +10,7 @@
 - **Vardiya planı** (`config/shifts.json`), **bugün listesi**, **hedefler**, **gündem akışı** (RSS, `config/sources.json`), **site sağlık kontrolleri**.
 - **Limit / internet farkındalığı:** Claude limit mesajı görülürse ya da internet 3 denemede gelmezse ofis "uyku moduna" geçer ve başka bir yapay zekâya yapıştırılabilecek bir **devir notu** (`handoff/LATEST.md`) yazar. *Limit algılama gerçek mesaj biçimlerine göre yazıldı ama canlı bir limit olayında henüz denenmedi.*
 - **Ücretsiz/yerel yapay zekâ yedeği** (`lib/providers.mjs`): Claude limiti dolunca, hata verince ya da internet yokken (yerel modelle) sohbet ve günlük radar bu sağlayıcılara düşer. Groq, Gemini, OpenRouter ve yerel Ollama için örnek ayar hazır; OpenAI uyumlu her uç eklenebilir.
-- **İnternet kesilince:** 3 denemede (≈30 sn) bağlantı gelmezse ofis uyur, gelen sorular kuyruğa alınır, bağlantı gelince yanıtlanıp sohbete düşer. 5 dakikadan uzun kesintide ve Claude limiti dolduğunda **devir notu + (ayarlıysa) Claude hafıza dosyası** otomatik yazılır.
+- **İnternet kesilince:** 3 denemede (≈30 sn) bağlantı gelmezse ofis uyur, gelen sorular kuyruğa alınır, bağlantı gelince yanıtlanıp sohbete düşer. İlk bağlantı hatasında ve Claude limiti dolduğunda **devir notu + (ayarlıysa) Claude hafıza dosyası** otomatik yazılır.
 - **Departman toplantısı** (`bin/farm-meeting`): salt-okunur (plan modu), harcama tavanlı.
 
 ## Kurulum
@@ -50,3 +50,7 @@ Ayrıntı: [SECURITY.md](SECURITY.md).
 
 ## Lisans
 MIT — bkz. [LICENSE](LICENSE).
+
+## Devamlılık (5 Ekim 2026)
+
+Varsayılan 7/24 görev motoru; kalıcı kuyruk, sağlayıcı cooldown kaydı, artan aralıklı tekrar ve günler arası görev taşıma. Tarayıcı kapalıyken de izleme sürer. Mac açık ve uyanık olmalıdır; internetsiz üretim için çalışan yerel model gerekir. Ayrıntılar: [devamlılık ve devir](docs/continuity-2026-10-05.md). Testler: `node --test tests/*.test.mjs`.
