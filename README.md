@@ -54,3 +54,9 @@ MIT — bkz. [LICENSE](LICENSE).
 ## Devamlılık (5 Ekim 2026)
 
 Varsayılan 7/24 görev motoru; kalıcı kuyruk, sağlayıcı cooldown kaydı, artan aralıklı tekrar ve günler arası görev taşıma. Tarayıcı kapalıyken de izleme sürer. Mac açık ve uyanık olmalıdır; internetsiz üretim için çalışan yerel model gerekir. Ayrıntılar: [devamlılık ve devir](docs/continuity-2026-10-05.md). Testler: `node --test tests/*.test.mjs`.
+
+## Codex destek masası
+
+`config/office.json` içine `"codex": {"enabled": true}` ekleyin; Codex CLI kurulu ve `codex login status` girişli olmalıdır. Panelde Codex kartı, son katkı ve hazır/çalışıyor/beklemede durumu görünür. Otomatik sohbet Claude limitinde Codex’e geçer; ücretsiz görevler önce ücretsiz sağlayıcıları, ardından Codex’i dener. `/ai codex` doğrudan Codex modudur. Mevcut ChatGPT kotasını kullanır, yeni API anahtarı istemez. Bu köprü taslak üretir; bağımsız Codex uygulama sohbetlerini izlemez veya devralmaz.
+
+CLI çağrısı stdin üzerinden, read-only sandbox ve ephemeral oturumla yapılır; uygulama/ tarayıcı / shell araçları kapalıdır. Ofis bağlamı Codex’e iletilir; ücretsiz sağlayıcıların `safe` kısıtı korunur. Son yanıt ve limit bekleme süresi yerel `data/codex-state.json` dosyasına yazılır. Resmî kaynak: https://developers.openai.com/codex/noninteractive/

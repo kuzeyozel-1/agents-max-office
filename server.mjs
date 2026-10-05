@@ -304,7 +304,7 @@ const farmCtx = {
 extra.init({ limitActive: () => Boolean(lastState.limit), state: () => lastState, meetFiles, writeNote, roster: () => farmCtx.roster() });
 
 function refreshState() {
-  const roster = farmCtx.roster();
+  const roster = [...farmCtx.roster(), ...(CFG.codex.enabled ? [{ slug:"codex-office", name:"Codex", description:"Limit desteği ve ofis taslakları", color:"#72d4cf", emoji:"✦", division:"Mühendislik" }] : [])];
   const st = { now: Date.now(), roster, ...dutyNow(roster), ...scan(roster) };
   try { st.shelved = fs.readdirSync(path.join(HOME, ".claude", "agents-raf")).filter(f => f.endsWith(".md") && !/readme/i.test(f)).length; } catch { st.shelved = 0; }
   st.limit = detectLimit(st.sessions);

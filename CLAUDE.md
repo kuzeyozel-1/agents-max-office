@@ -9,3 +9,6 @@
 - İç bağlamı ücretsiz uzak sağlayıcılara ekleme. `full` yalnızca Claude/yerel model, `safe` uzak sağlayıcılara izinli metindir.
 - Test: `node --test tests/*.test.mjs`; sözdizimi: `node --check server.mjs` ve değişen modüller.
 - Bu depo ofistir. Vinci site kodu `../vincistudio`, Stage Medya `../stage-medya` içindedir; projeleri karıştırma.
+
+## Codex desteği
+`config/office.json` → `codex.enabled` ile etkin. `lib/codex.mjs` mevcut ChatGPT girişini kullanarak Codex CLI salt-okunur taslak çağrısı yapar; gizli anahtar kopyalamaz. Otomatik ofis sohbeti Claude → Codex → ücretsiz; otomatik ücretsiz işler Groq/Gemini → Codex. `/ai codex` yalnızca Codex seçer. Son katkı/kota beklemesi `data/codex-state.json` içinde. Codex kotası ücretsiz/sınırsız değildir; panel kalan yüzdeyi bildiğini iddia etmez.

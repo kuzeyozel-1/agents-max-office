@@ -56,5 +56,8 @@
       "label": "Anasayfa",
       "url": "https://example.com/"
     }
-  ]
+  ],
+  "codex": {
+    "enabled": false
+  }
 }

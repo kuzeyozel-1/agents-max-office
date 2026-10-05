@@ -36,3 +36,6 @@ Kullanıcının aktardığı son durum: e195711 ile logo listesi de commit/push 
 
 ## Doğrulama
 `node --test tests/*.test.mjs`: atomik kayıt, limitten bağımsız ücretsiz iş, hata/tekrar, gün değişimi, aktif görev koruması, kayıtlı yanıt kurtarma, 429 sağlayıcı geçişi/yeniden başlatma ve özel bağlamın uzak sağlayıcıya gitmemesi.
+
+## Codex katkısı (aynı gün)
+Claude ve ücretsiz sağlayıcı limitlerine Codex CLI desteği bağlandı. Bugün/Sohbet panellerinde durumu ve son katkısı görünür; çağrı sırasında ofiste Codex çalışanı da aktiftir. Mevcut ChatGPT oturumu kullanılır. Bağımsız masaüstü sohbetleri izlenmez. Sadece taslak/soru yanıtı; müşteri reposunda kod çalıştırma ve yayın yetkisi verilmedi. Toplantı scriptleri hâlâ Claude’a özgüdür.

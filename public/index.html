@@ -557,10 +557,11 @@ function renderAi() {
   once("ai", [a, Boolean(lim), S.net && S.net.online], el, () => {
     const dot = (ok) => `<span style="color:${ok ? "#7bc96f" : "#e06c5b"}">●</span>`;
     const rows = [`<div class="row"><span>${dot(!lim && (!S.net || S.net.online !== false))} <b>Claude</b></span><span class="mute">${lim ? "limit dolu" : S.net && S.net.online === false ? "internet yok" : "hazır"}</span></div>`]
+      .concat(a.codex ? [`<div class="row"><span>${dot(a.codex.state === "hazır" || a.codex.busy)} <b>✦ Codex</b> <span class="mute">ChatGPT hesabı · destek</span></span><span class="mute">${esc(a.codex.state)}${a.codex.error ? " · " + esc(a.codex.error) : ""}</span></div>`] : [])
       .concat(a.providers.map((p) => `<div class="row"><span>${dot(p.state === "hazır")} <b>${esc(p.name)}</b> <span class="mute">${esc(p.model)} · ${p.local ? "yerel" : "ücretsiz"}</span></span><span class="mute">${esc(p.state)}${p.err ? " · " + esc(p.err) : ""}</span></div>`));
     el.innerHTML = rows.join("") + (a.providers.length ? "" : `<div class="mute">Sağlayıcı tanımlı değil (config/office.json → providers).</div>`) +
-      `<div style="margin:8px 0 4px">Mod: ${["oto", "claude", "ucretsiz"].map((m) => `<button data-ai="${m}" ${a.mode === m ? "disabled" : ""}>${m}</button>`).join(" ")}</div>` +
-      `<div class="mute" style="margin-bottom:4px">Claude kullanımı (elle girilir): ${a.usage && (a.usage.hafta != null || a.usage.oturum != null) ? `hafta ${a.usage.hafta ?? "?"}% · oturum ${a.usage.oturum ?? "?"}%` : "girilmedi — sohbete <code>/kullanim hafta 47</code> yazın"}. Ofis bunu kendisi okuyamaz; yalnızca limit DOLUNCA fark eder.</div><div class="mute">oto: Claude, limit/hata/internet yoksa ücretsiz sağlayıcı. Uzak sağlayıcıya yalnızca herkese açık gündem gider. Bekleyen soru: ${a.queued}</div>`;
+      `<div style="margin:8px 0 4px">Mod: ${["oto", "claude", "codex", "ucretsiz"].map((m) => `<button data-ai="${m}" ${a.mode === m ? "disabled" : ""}>${m}</button>`).join(" ")}</div>` +
+      `<div class="mute" style="margin-bottom:4px">Claude kullanımı (elle girilir): ${a.usage && (a.usage.hafta != null || a.usage.oturum != null) ? `hafta ${a.usage.hafta ?? "?"}% · oturum ${a.usage.oturum ?? "?"}%` : "girilmedi — sohbete <code>/kullanim hafta 47</code> yazın"}. Ofis bunu kendisi okuyamaz; yalnızca limit DOLUNCA fark eder.</div><div class="mute">oto: Claude → Codex → ücretsiz sağlayıcı. Ücretsiz görevler: Groq/Gemini → Codex. Codex ChatGPT kotasını kullanır; internet gerekir. Bekleyen soru: ${a.queued}</div>`;
     el.querySelectorAll("button[data-ai]").forEach((b) => { b.onclick = async () => { await api("/api/chat", { text: "/ai " + b.dataset.ai, confirm: true }); poll(); }; });
   });
 }
@@ -568,7 +569,7 @@ function renderAi() {
 const ACTIONS = [
   ["Toplantı", [["Genel durum (Özel)", "/toplanti Özel"], ["Satış", "/toplanti Satış"], ["Mühendislik", "/toplanti Mühendislik"], ["Tasarım", "/toplanti Tasarım"]]],
   ["Çalışma", [["Günün planını yeniden başlat", "__restart"], ["Pazar radarını şimdi çalıştır", "__radar"], ["Durum özeti", "/durum"]]],
-  ["Yapay zekâ modu", [["Otomatik (Claude → ücretsiz)", "/ai oto"], ["Yalnızca Claude", "/ai claude"], ["Önce ücretsiz", "/ai ucretsiz"]]],
+  ["Yapay zekâ modu", [["Otomatik (Claude → ücretsiz)", "/ai oto"], ["Yalnızca Claude", "/ai claude"], ["Codex desteği", "/ai codex"], ["Önce ücretsiz", "/ai ucretsiz"]]],
   ["Toplantı takvimi", [["Aç", "/takvim ac"], ["Kapat", "/takvim kapat"]]],
 ];
 let menuArm = "";
@@ -605,18 +606,21 @@ function renderPrompts() {
   el.querySelectorAll("[data-pd]").forEach((b) => { b.onclick = async () => { await api("/api/prompts/done", { id: b.dataset.pd }); promptItems = promptItems.filter((p) => p.id !== b.dataset.pd); renderPrompts(); renderMenu(); }; });
 }
 loadPrompts(); setInterval(loadPrompts, 60000);
-let wdOpen = "", wdText = "";
+let wdOpen = "", wdText = "", codexOpen = false;
 function renderWorkday() {
   const w = S.workday || { tasks: [] }, el = document.getElementById("wd"), out = document.getElementById("wdOut");
-  once("wd", [w, wdOpen, wdText], el, () => {
+  once("wd", [w, S.ai, S.net?.online, Math.floor((S.now || 0) / 10000), wdOpen, wdText], el, () => {
     const ico = { working: "⚙️", done: "✅", planned: "·", failed: "⚠️" }, tr = { working: "çalışıyor…", done: "bitti", planned: "sırada", failed: "başarısız" };
     const done = w.tasks.filter((t) => t.status === "done").length;
-    const ps = S.ai?.providers || [], ready = ps.filter(p => p.state === "hazır" && (p.local || S.net?.online !== false));
-    const mode = w.busy ? "ÜRETİM SÜRÜYOR" : !ready.length ? "SAĞLAYICI BEKLENİYOR" : w.tasks.every(t => t.status === "done") ? "YENİ GÖREV BEKLENİYOR" : "GÖREVLER İZLENİYOR";
+    const cx = S.ai?.codex;
+    const ps = [...(S.ai?.providers || []), ...(cx?.enabled ? [{name:"Codex",state:cx.state,local:false}] : [])], ready = ps.filter(p => p.state === "hazır" && (p.local || S.net?.online !== false));
+    const mode = w.busy || cx?.busy ? "ÜRETİM SÜRÜYOR" : !ready.length ? "SAĞLAYICI BEKLENİYOR" : w.tasks.every(t => t.status === "done") ? "YENİ GÖREV BEKLENİYOR" : "GÖREVLER İZLENİYOR";
     const continuity = `<div style="border:1px solid #9a7840;padding:10px;margin-bottom:10px"><b>◉ 7/24 · ${mode}</b><div class="mute">Kalıcı görev kaydı · otomatik yeniden deneme · ${S.ai?.queued || 0} bekleyen soru</div><div class="mute">${ps.map(p => esc(p.name) + ": " + esc(p.state)).join(" · ")}</div><div class="mute">Son durum kaydı: ${S.now ? new Date(S.now).toLocaleTimeString("tr-TR") : "—"} · cihaz açıkken</div></div>`;
-    el.innerHTML = continuity + `<div class="mute" style="margin-bottom:6px">${done}/${w.tasks.length} görev bitti · ücretsiz yapay zekâ sağlayıcıları rol olarak yapar, çıktı TASLAKTIR: hiçbir yere gönderilmez/yayınlanmaz.</div>` +
+    const codexCard = cx?.enabled ? `<div style="border:1px solid #72d4cf;border-radius:6px;padding:10px;margin-bottom:10px"><b style="color:#72d4cf">✦ CODEX · ${esc(cx.state)}</b><div class="mute">Claude limitinde ofise destek · ${cx.calls || 0} çağrı</div>${cx.lastReason ? `<div class="mute">${esc(cx.lastReason)}</div>` : ""}${cx.error ? `<div>${esc(cx.error)}</div>` : ""}${cx.lastText ? `<details id="codexLast" ${codexOpen ? "open" : ""}><summary>Son Codex katkısı</summary><pre style="white-space:pre-wrap;max-height:240px;overflow:auto">${esc(cx.lastText)}</pre></details>` : `<div class="mute">İlk destek görevi bekleniyor.</div>`}</div>` : "";
+    el.innerHTML = continuity + codexCard + `<div class="mute" style="margin-bottom:6px">${done}/${w.tasks.length} görev bitti · yapay zekâ sağlayıcıları rol olarak yapar, çıktı TASLAKTIR: hiçbir yere gönderilmez/yayınlanmaz.</div>` +
       w.tasks.map((t) => { const a = agents.get(t.slug); return `<div class="li" style="cursor:${t.status === "done" ? "pointer" : "default"}" data-wd="${esc(t.id)}">${ico[t.status] || "·"} <b>${esc(a ? a.r.name : t.slug)}</b> — ${esc(t.title)} <span class="mute">${t.retryAt > Date.now() ? "yeniden deneme: " + new Date(t.retryAt).toLocaleTimeString("tr-TR") : tr[t.status] || ""}${t.attempts ? " · deneme " + t.attempts : ""}${t.via ? " · " + esc(t.via) : ""}${t.error ? " · " + esc(t.error) : ""}</span></div>`; }).join("") +
       `<div style="margin-top:6px"><button id="wdRe">Planı yeniden başlat</button></div>`;
+    const codexLast = document.getElementById("codexLast"); if (codexLast) codexLast.ontoggle = () => { codexOpen = codexLast.open; };
     el.querySelectorAll("[data-wd]").forEach((n) => { n.onclick = async () => { const t = w.tasks.find((x) => x.id === n.dataset.wd); if (!t || t.status !== "done") return; wdOpen = t.id; wdText = (await fetch("/api/workday/output?id=" + encodeURIComponent(t.id)).then((r) => r.json()).catch(() => ({ text: "" }))).text; renderWorkday(); }; });
     document.getElementById("wdRe").onclick = async () => { wdOpen = ""; wdText = ""; await api("/api/workday/restart", {}); poll(); };
   });
