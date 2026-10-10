@@ -235,7 +235,12 @@ function assignOffice() {
   const want = [];
   boss.forEach((a, i) => want.push({ key: a.r.slug, a, slot: SLOTS.boss[i], anim: a.state === "working" ? "type" : SLOTS.boss[i].anim }));
   const place = (arr, slots, anim) => arr.slice(0, slots.length).forEach((a, i) => want.push({ key: a.r.slug, a, slot: slots[i], anim }));
-  place(rest.filter((a) => a.state === "working").sort(byName), SLOTS.open, "type");
+  const workingHere = rest.filter((a) => a.state === "working").sort(byName);
+  place(workingHere, SLOTS.open, "type");
+  // Boş kalan açık masalar "mesaide" (onduty) ajanlarla dolar — önceden hiç yerleştirilmiyorlardı,
+  // bu yüzden 20+ kişi "mesaide" olsa da ofiste tek bir kişi bile görünmüyordu.
+  const onDutyHere = rest.filter((a) => a.state === "onduty").sort(byName);
+  place(onDutyHere, SLOTS.open.slice(workingHere.length), "idle");
   place(rest.filter((a) => a.state === "meeting").sort(byName), SLOTS.meet, "meet");
   place(rest.filter((a) => a.state === "break").sort(byName), SLOTS.brk, "coffee");
   const sess = (S._view?.sessions || []).filter((s) => s.state !== "sleeping").slice(0, SLOTS.srv.length);
